@@ -1,9 +1,10 @@
 import { AgenticWorkflow, Intent } from './AgenticWorkflow';
 import { OpenAI } from 'openai';
 import { VirtualWalletSystem } from '../lib/virtual-wallet-system';
-import { Wallet } from 'ethers';
+import type { WalletResponse, SessionData } from '../lib/tura-wallet/wallet_manager';
 
-// Initialize OpenAI client with API key from environment
+/// <reference types="vite/client" />
+
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 if (!OPENAI_API_KEY) {
   console.error('OpenAI API key not found in environment variables');
@@ -16,8 +17,10 @@ const openai = new OpenAI({
 });
 
 export class MockWalletAgent extends AgenticWorkflow {
-  private state: { type: 'idle' | 'awaiting_faucet_confirmation' } = { type: 'idle' };
-  // Using inherited walletSystem from AgenticWorkflow
+  private state: { 
+    type: 'idle' | 'awaiting_wallet_password' | 'awaiting_login_password';
+    address?: string;
+  } = { type: 'idle' };
 
   constructor() {
     super(
@@ -34,72 +37,56 @@ export class MockWalletAgent extends AgenticWorkflow {
 🔑 Create a new wallet
 💰 Check your balance
 💸 Send TURA tokens to another address
-🚰 Get test tokens from our faucet
 
 Just let me know what you'd like to do!`;
   }
 
-  private async handleFaucetRequest(): Promise<string> {
-    const address = this.walletSystem.getCurrentAddress();
+  private async handleLogin(address?: string): Promise<string> {
     if (!address) {
-      return "You'll need a wallet first before you can receive test tokens. Would you like me to help you create one? Just say 'create wallet' to get started.";
+      return "Please provide your wallet address to log in.";
     }
 
-    const balance = await this.walletSystem.getBalance(address);
-    if (balance === 0) {
-      this.state = { type: 'awaiting_faucet_confirmation' };
-      return `Would you like to receive 100 TURA test tokens? Please confirm with 'yes' or 'y'.`;
+    try {
+      // Validate address format
+      if (!address.startsWith('0x') || address.length !== 42) {
+        return "Invalid wallet address format. Please provide a valid Ethereum address.";
+      }
+
+      this.state = { type: 'awaiting_login_password', address };
+      return "Please enter your wallet password:";
+    } catch (error) {
+      console.error('Login error:', error);
+      return "Failed to process login request. Please try again.";
     }
-    return `You already have ${balance} TURA tokens. The faucet is only available for new wallets with 0 balance.`;
   }
-
-  private async processFaucetDistribution(): Promise<string> {
-    const address = this.walletSystem.getCurrentAddress();
-    if (!address) {
-      this.state = { type: 'idle' };
-      return "Please create a wallet first.";
-    }
-
-    const result = await this.walletSystem.distributeFaucet(address);
-    this.state = { type: 'idle' };
-    return `✅ ${result.message}\nYour new balance is ${result.newBalance} TURA.`;
-  }
-
-
 
   private async handleBalanceCheck(): Promise<string> {
-    const address = this.walletSystem.getCurrentAddress();
-    if (!address) {
-      return "You don't have a wallet yet. Would you like me to help you create one? Just say 'create wallet' to get started.";
+    const session = await this.walletSystem.getSession();
+    if (!session?.password) {
+      return "You need to log in to your wallet first. Please provide your wallet address and I'll help you log in.";
     }
 
-    const balance = await this.walletSystem.getBalance(address);
-    const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+    const walletAddress = (session as WalletResponse & SessionData).address;
+    const balance = await this.walletSystem.getBalance(walletAddress);
+    const shortAddress = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
     return `💰 Your wallet (${shortAddress}) contains ${balance} TURA`;
   }
 
-  private async handleCreateWallet(): Promise<string> {
+  private async handleCreateWallet(password?: string): Promise<string> {
     try {
-      const existingAddress = this.walletSystem.getCurrentAddress();
-      if (existingAddress) {
-        const balance = await this.walletSystem.getBalance(existingAddress);
-        return `You already have a wallet! Your address is: ${existingAddress} with ${balance} TURA. You can ask me to check your balance or get test tokens.`;
+      if (!password) {
+        this.state = { type: 'awaiting_wallet_password' };
+        return "Please provide a password for your new wallet (minimum 8 characters):";
       }
 
-      const wallet = Wallet.createRandom();
-      if (!wallet.mnemonic?.phrase) {
-        throw new Error('Failed to generate mnemonic phrase');
+      if (password.length < 8) {
+        return "Password must be at least 8 characters long. Please try again:";
       }
 
-      // Keep the '0x' prefix for the private key
-      const privateKey = wallet.privateKey;
-        
-      const { address } = this.walletSystem.createWallet(privateKey);
-      this.walletSystem.setCurrentAddress(address);
+      const response = await this.walletSystem.createWallet(password);
       
-      return `🎉 Wallet created successfully!\nYour wallet address: ${address}\n\n` +
-             `🔑 Important: Save your mnemonic phrase:\n${wallet.mnemonic.phrase}\n\n` +
-             `Your initial balance is 0 TURA. You can request test tokens using the faucet.`;
+      return `🎉 Wallet created successfully!\nYour wallet address: ${response.address}\n\n` +
+             `Your initial balance is 0 TURA.`;
     } catch (error) {
       console.error('Error creating wallet:', error);
       return '❌ Failed to create wallet. Please try again.';
@@ -119,7 +106,7 @@ Just let me know what you'd like to do!`;
 CREATE_WALLET - When user wants to create a new wallet
 CHECK_BALANCE - When user wants to check their balance
 SEND_TOKENS - When user wants to send/transfer TURA tokens
-GET_TOKENS - When user wants to get test tokens from faucet
+LOGIN - When user wants to log in to their wallet
 UNKNOWN - When the intent doesn't match any of the above
 
 Respond with a JSON object containing 'intent' and 'confidence' fields.
@@ -150,15 +137,24 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
       return this.getWelcomeMessage();
     }
 
-    const lowerText = text.toLowerCase().trim();
-    
-    // Handle faucet confirmation state
-    if (this.state.type === 'awaiting_faucet_confirmation') {
-      if (lowerText === 'yes' || lowerText === 'y') {
-        return await this.processFaucetDistribution();
-      }
+    // Handle password states
+    if (this.state.type === 'awaiting_wallet_password') {
       this.state = { type: 'idle' };
-      return "Okay, I won't send you any test tokens. Let me know if you change your mind!";
+      return await this.handleCreateWallet(text);
+    }
+    
+    if (this.state.type === 'awaiting_login_password') {
+      const address = this.state.address;
+      this.state = { type: 'idle' };
+      if (!address) {
+        return "Something went wrong. Please try again.";
+      }
+      try {
+        await this.walletSystem.login(address, text);
+        return "✅ Successfully logged in! You can now check your balance or send tokens.";
+      } catch (error) {
+        return "❌ Login failed. Please check your password and try again.";
+      }
     }
     
     // Use GPT-3.5 for intent recognition
@@ -170,9 +166,38 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
         case 'check_balance':
           return await this.handleBalanceCheck();
         case 'send_tokens':
-          return `Transfer functionality is currently under maintenance. Please try again later.`;
-        case 'get_tokens':
-          return await this.handleFaucetRequest();
+          const toAddressMatch = text.match(/0x[a-fA-F0-9]{40}/);
+          const amountMatch = text.match(/\d+(\.\d+)?/);
+          
+          if (!toAddressMatch || !amountMatch) {
+            return "Please provide a valid wallet address and amount to send. For example: 'send 10 TURA to 0x...'";
+          }
+
+          const session = await this.walletSystem.getSession();
+          if (!session?.password) {
+            return "You need to log in to your wallet first. Please provide your wallet address and I'll help you log in.";
+          }
+
+          try {
+            const receipt = await this.walletSystem.transferTokens(
+              (session as WalletResponse & SessionData).address,
+              toAddressMatch[0],
+              parseFloat(amountMatch[0]),
+              session.password
+            );
+
+            if (!receipt.success) {
+              return "❌ Transaction failed. Please try again.";
+            }
+
+            return `✅ Successfully sent ${amountMatch[0]} TURA!`;
+          } catch (error) {
+            console.error('Transaction error:', error);
+            return `❌ ${error instanceof Error ? error.message : 'Transaction failed. Please try again.'}`; 
+          }
+        case 'login':
+          const addressMatch = text.match(/0x[a-fA-F0-9]{40}/);
+          return await this.handleLogin(addressMatch?.[0]);
       }
     }
     
