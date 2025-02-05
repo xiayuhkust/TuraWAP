@@ -5,11 +5,7 @@ import { getWorkflowRuns } from '../stores/store-econ';
 import { AgentData } from '../types/agentTypes';
 import { VirtualWalletSystem } from '../lib/virtual-wallet-system';
 
-declare module 'vite' {
-  interface ImportMetaEnv {
-    VITE_OPENAI_API_KEY: string;
-  }
-}
+/// <reference types="vite/client" />
 
 const openai = new OpenAI({
   apiKey: import.meta.env?.VITE_OPENAI_API_KEY || '',
