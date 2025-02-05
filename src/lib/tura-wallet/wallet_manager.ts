@@ -4,7 +4,7 @@ import { Buffer } from 'buffer';
 
 // Ensure Buffer is available globally
 if (typeof window !== 'undefined') {
-  window.Buffer = window.Buffer || Buffer;
+  (window as any).Buffer = Buffer;
 }
 
 declare global {
