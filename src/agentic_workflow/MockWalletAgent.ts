@@ -1,7 +1,7 @@
 import { AgenticWorkflow, Intent } from './AgenticWorkflow';
 import { OpenAI } from 'openai';
 import { VirtualWalletSystem } from '../lib/virtual-wallet-system';
-import type { SessionData, WalletResponse } from '../lib/tura-wallet/wallet_manager';
+import type { WalletResponse, SessionData } from '../lib/tura-wallet/wallet_manager';
 
 /// <reference types="vite/client" />
 
@@ -66,7 +66,7 @@ Just let me know what you'd like to do!`;
       return "You need to log in to your wallet first. Please provide your wallet address and I'll help you log in.";
     }
 
-    const walletAddress = (session as WalletResponse).address;
+    const walletAddress = (session as WalletResponse & SessionData).address;
     const balance = await this.walletSystem.getBalance(walletAddress);
     const shortAddress = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
     return `💰 Your wallet (${shortAddress}) contains ${balance} TURA`;
@@ -179,18 +179,18 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
           }
 
           try {
-            const receipt = await this.walletSystem.sendTransaction(
-              (session as WalletResponse).address,
+            const receipt = await this.walletSystem.transferTokens(
+              (session as WalletResponse & SessionData).address,
               toAddressMatch[0],
-              amountMatch[0],
+              parseFloat(amountMatch[0]),
               session.password
             );
 
-            if (!receipt.status) {
+            if (!receipt.success) {
               return "❌ Transaction failed. Please try again.";
             }
 
-            return `✅ Successfully sent ${amountMatch[0]} TURA!\nTransaction hash: ${receipt.transactionHash}`;
+            return `✅ Successfully sent ${amountMatch[0]} TURA!`;
           } catch (error) {
             console.error('Transaction error:', error);
             return `❌ ${error instanceof Error ? error.message : 'Transaction failed. Please try again.'}`; 

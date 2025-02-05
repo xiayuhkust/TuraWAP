@@ -1,6 +1,4 @@
 import Web3 from 'web3';
-import type { TransactionReceipt } from './wallet_manager';
-
 // Chain configuration
 const CHAIN_CONFIG = {
   chainId: 1337,
