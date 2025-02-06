@@ -5,6 +5,7 @@ import { addWorkflowRecord, startWorkflowRun, completeWorkflowRun, getAgentFee }
 export class TuraWorkflow extends AgenticWorkflow {
   private currentRunId: string | null = null;
   protected walletManager: WalletManagerImpl;
+  protected exampleTxt = ["Start workflow"];
 
   constructor(walletManager: WalletManagerImpl) {
     super('TuraWorkflow', 'Automated workflow for wallet setup and agent registration');
