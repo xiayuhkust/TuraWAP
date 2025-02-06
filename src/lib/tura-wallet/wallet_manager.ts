@@ -163,6 +163,14 @@ export class WalletManagerImpl {
       const encryptedSession = await this._encrypt(sessionData, 'session');
       sessionStorage.setItem(this.sessionKey, encryptedSession);
 
+      // Dispatch wallet update event
+      window.dispatchEvent(new CustomEvent('wallet-updated', { 
+        detail: { 
+          address: account.address, 
+          balance: await this.getBalance(account.address)
+        }
+      }));
+
       return {
         address: account.address,
         mnemonic: mnemonic,
@@ -234,6 +242,14 @@ export class WalletManagerImpl {
       
       const encryptedSession = await this._encrypt(sessionData, 'session');
       sessionStorage.setItem(this.sessionKey, encryptedSession);
+
+      // Dispatch wallet update event
+      window.dispatchEvent(new CustomEvent('wallet-updated', { 
+        detail: { 
+          address: walletData.address, 
+          balance: await this.getBalance(walletData.address)
+        }
+      }));
       
       return {
         address: walletData.address,
@@ -271,12 +287,24 @@ export class WalletManagerImpl {
         throw new Error('Invalid wallet data or password');
       }
 
-      return await this.walletService.sendTransaction(
+      const receipt = await this.walletService.sendTransaction(
         fromAddress,
         toAddress,
         amount,
         walletData.privateKey
       );
+
+      // Dispatch wallet update event after successful transaction
+      if (receipt.status) {
+        window.dispatchEvent(new CustomEvent('wallet-updated', { 
+          detail: { 
+            address: fromAddress, 
+            balance: await this.getBalance(fromAddress)
+          }
+        }));
+      }
+
+      return receipt;
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Transaction failed: ${error.message}`);
@@ -323,6 +351,14 @@ export class WalletManagerImpl {
       console.error('Failed to get current address:', error);
       return null;
     }
+  }
+
+  public logout(): void {
+    sessionStorage.removeItem(this.sessionKey);
+    localStorage.removeItem('last_activity');
+    window.dispatchEvent(new CustomEvent('wallet-updated', { 
+      detail: { address: '', balance: '0' }
+    }));
   }
 
   async getSession(): Promise<SessionData | null> {
