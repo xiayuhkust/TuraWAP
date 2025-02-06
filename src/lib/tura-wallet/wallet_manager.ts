@@ -1,6 +1,7 @@
 import { WalletService } from './wallet';
 import * as bip39 from 'bip39';
 import { Buffer } from 'buffer';
+import { WalletState } from './wallet_state';
 
 // Ensure Buffer is available globally
 if (typeof window !== 'undefined') {
@@ -53,7 +54,7 @@ export class WalletManagerImpl {
   public walletService: WalletService;
   private readonly keyPrefix = 'wallet_';
   private readonly sessionKey = 'wallet_session';
-  private isConnected: boolean = false;
+  private _isConnected: boolean = false;
   private connectionCheckInterval: number | null = null;
 
   private setupConnectionCheck() {
@@ -63,22 +64,38 @@ export class WalletManagerImpl {
     
     this.connectionCheckInterval = window.setInterval(async () => {
       try {
-        await this.walletService.isConnected();
-        if (!this.isConnected) {
-          this.isConnected = true;
-          window.dispatchEvent(new CustomEvent('wallet-connection-changed', {
-            detail: { connected: true }
-          }));
+        const connected = await this.walletService.isConnected();
+        if (!this._isConnected && connected) {
+          this._isConnected = true;
+          await WalletState.getInstance().updateState({ isConnected: true });
+        } else if (this._isConnected && !connected) {
+          this._isConnected = false;
+          await WalletState.getInstance().updateState({ isConnected: false });
         }
       } catch (error) {
-        if (this.isConnected) {
-          this.isConnected = false;
-          window.dispatchEvent(new CustomEvent('wallet-connection-changed', {
-            detail: { connected: false }
-          }));
+        if (this._isConnected) {
+          this._isConnected = false;
+          await WalletState.getInstance().updateState({ isConnected: false });
         }
       }
     }, 5000);
+  }
+
+  public async isConnected(): Promise<boolean> {
+    try {
+      const connected = await this.walletService.isConnected();
+      if (this._isConnected !== connected) {
+        this._isConnected = connected;
+        await WalletState.getInstance().updateState({ isConnected: connected });
+      }
+      return connected;
+    } catch (error) {
+      if (this._isConnected) {
+        this._isConnected = false;
+        await WalletState.getInstance().updateState({ isConnected: false });
+      }
+      return false;
+    }
   }
 
   constructor() {
@@ -199,13 +216,12 @@ export class WalletManagerImpl {
       const encryptedSession = await this._encrypt(sessionData, 'session');
       sessionStorage.setItem(this.sessionKey, encryptedSession);
 
-      // Dispatch wallet update event
-      window.dispatchEvent(new CustomEvent('wallet-updated', { 
-        detail: { 
-          address: account.address, 
-          balance: await this.getBalance(account.address)
-        }
-      }));
+      // Update wallet state
+      await WalletState.getInstance().updateState({
+        address: account.address,
+        balance: await this.getBalance(account.address),
+        isConnected: await this.isConnected()
+      });
 
       return {
         address: account.address,
@@ -279,13 +295,14 @@ export class WalletManagerImpl {
       const encryptedSession = await this._encrypt(sessionData, 'session');
       sessionStorage.setItem(this.sessionKey, encryptedSession);
 
-      // Dispatch wallet update event
-      window.dispatchEvent(new CustomEvent('wallet-updated', { 
-        detail: { 
-          address: walletData.address, 
-          balance: await this.getBalance(walletData.address)
-        }
-      }));
+      // Update wallet state
+      const balance = await this.getBalance(walletData.address);
+      const isConnected = await this.isConnected();
+      await WalletState.getInstance().updateState({
+        address: walletData.address,
+        balance,
+        isConnected
+      });
       
       return {
         address: walletData.address,
@@ -330,14 +347,13 @@ export class WalletManagerImpl {
         walletData.privateKey
       );
 
-      // Dispatch wallet update event after successful transaction
+      // Update wallet state after successful transaction
       if (receipt.status) {
-        window.dispatchEvent(new CustomEvent('wallet-updated', { 
-          detail: { 
-            address: fromAddress, 
-            balance: await this.getBalance(fromAddress)
-          }
-        }));
+        await WalletState.getInstance().updateState({
+          address: fromAddress,
+          balance: await this.getBalance(fromAddress),
+          isConnected: await this.isConnected()
+        });
       }
 
       return receipt;
@@ -393,13 +409,15 @@ export class WalletManagerImpl {
     sessionStorage.removeItem(this.sessionKey);
     localStorage.removeItem('last_activity');
     this.cleanup();
-    window.dispatchEvent(new CustomEvent('wallet-updated', { 
-      detail: { address: '', balance: '0' }
-    }));
+    WalletState.getInstance().updateState({
+      address: '',
+      balance: '0',
+      isConnected: false
+    });
   }
 
   public isWalletConnected(): boolean {
-    return this.isConnected;
+    return this._isConnected;
   }
 
   async getSession(): Promise<SessionData | null> {
