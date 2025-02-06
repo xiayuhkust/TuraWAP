@@ -557,7 +557,7 @@ export default function ChatPage() {
                     >
                       <div className="flex items-center justify-between mb-1">
                         <div className="font-medium">{workflow.name}</div>
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className={`text-xs ${workflow.status === 'VALID' ? 'bg-[#383a40]' : ''}`}>
                           {workflow.status}
                         </Badge>
                       </div>
@@ -684,10 +684,9 @@ export default function ChatPage() {
             <Button
               variant="outline"
               size="icon"
-              className="bg-[#2b2d31]"
+              className={`bg-[#2b2d31] ${isRecording ? 'text-destructive' : ''}`}
               onClick={isRecording ? stopRecording : startRecording}
               disabled={isLoading}
-              className={isRecording ? 'text-destructive' : ''}
             >
               <Mic className="h-4 w-4" />
             </Button>
