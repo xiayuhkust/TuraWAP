@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, Send, Bot, Code2, Wallet, RefreshCw } from 'lucide-react';
+import { Mic, Send, Bot, Code2, Wallet } from 'lucide-react';
 import { TuraWorkflow } from '../../agentic_workflow/TuraWorkflow';
 import { WalletManagerImpl } from '../../lib/tura-wallet/wallet_manager';
 import { AgenticWorkflow } from '../../agentic_workflow/AgenticWorkflow';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { WalletDisplay } from '../wallet/WalletDisplay';
+import { WalletErrorBoundary } from '../wallet/WalletErrorBoundary';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
 import { officialAgents, agents, createWorkflows } from '../../stores/agent-store';
@@ -36,7 +38,7 @@ interface SignatureDetails {
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const updateMessages = useCallback((newMessages: Message[]): void => {
-    setMessages(prevMessages => {
+    setMessages((prevMessages: ChatMessage[]) => {
       if (JSON.stringify(prevMessages) === JSON.stringify(newMessages)) return prevMessages;
       return newMessages.map((msg, index) => ({
         id: `${Date.now()}-${index}`,
@@ -47,32 +49,14 @@ export default function ChatPage() {
     });
   }, []);
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
-  const [signatureDetails, setSignatureDetails] = useState<SignatureDetails | null>(null);
+  const [signatureDetails] = useState<SignatureDetails | null>(null);
   const [password, setPassword] = useState('');
-
-  // Expose dialog control to window for AgentManager
-  useEffect(() => {
-    interface ChatPageInterface {
-      showSignatureDialog: (details: SignatureDetails) => void;
-    }
-
-    (window as unknown as { ChatPage: ChatPageInterface }).ChatPage = {
-      showSignatureDialog: (details: SignatureDetails) => {
-        setSignatureDetails(details);
-        setShowSignatureDialog(true);
-      }
-    };
-    return () => {
-      delete (window as unknown as { ChatPage?: ChatPageInterface }).ChatPage;
-    };
-  }, [messages.length]);
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [pressProgress, setPressProgress] = useState(0);
   const pressTimer = useRef<number | null>(null);
-  const [walletManager] = useState(() => new WalletManagerImpl());
-  const [workflows] = useState(() => createWorkflows(walletManager));
+  const [workflows] = useState(() => createWorkflows(new WalletManagerImpl()));
   const turaWorkflow = useRef<TuraWorkflow | null>(null);
   
   useEffect(() => {
@@ -81,7 +65,6 @@ export default function ChatPage() {
     }
   }, [workflows]);
   const [activeAgent, setActiveAgent] = useState<OfficialAgent | Agent | Workflow | null>(officialAgents[0]);
-  const [chatAddress, setChatAddress] = useState('');
   const [walletAgent] = useState(() => {
     const instance = officialAgents[0].instance;
     if (!(instance instanceof MockWalletAgent)) {
@@ -110,26 +93,12 @@ export default function ChatPage() {
       });
 
       try {
-        const storedAddress = await walletManager.getCurrentAddress();
-        if (storedAddress) {
-          setChatAddress(storedAddress);
-          await updateBalanceWithMessage(storedAddress);
-          
-          const balanceResponse = await walletAgent.processMessage('balance');
-          updateMessages([{
-            text: balanceResponse,
-            sender: 'agent',
-            timestamp: new Date().toISOString()
-          }]);
-        } else {
-          // Show welcome message for new users
-          const welcomeResponse = await walletAgent.processMessage('help');
-          updateMessages([{
-            text: welcomeResponse,
-            sender: 'agent',
-            timestamp: new Date().toISOString()
-          }]);
-        }
+        const welcomeResponse = await walletAgent.processMessage('help');
+        updateMessages([{
+          text: welcomeResponse,
+          sender: 'agent',
+          timestamp: new Date().toISOString()
+        }]);
       } catch (error) {
         console.error('Failed to initialize chat:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -142,7 +111,7 @@ export default function ChatPage() {
     };
 
     initializeChat();
-  }, [walletManager, walletAgent, updateBalanceWithMessage, updateMessages]);
+  }, [walletAgent, updateMessages]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -174,14 +143,8 @@ export default function ChatPage() {
           if (!(walletAgent instanceof AgenticWorkflow)) {
             return;
           }
-          // Local wallet handles current address
+          // Local wallet handles messages
           await walletAgent.processMessage(text);
-          
-          const storedAddress = await walletManager.getCurrentAddress();
-          if (storedAddress !== chatAddress) {
-            setChatAddress(storedAddress || '');
-          }
-          
           const newMessages = walletAgent.getMessages();
           updateMessages(newMessages);
         } else {
@@ -402,29 +365,25 @@ export default function ChatPage() {
           {activeAgent ? activeAgent.name : 'Chat'}
           
           <div className="flex items-center gap-2">
-            {chatAddress && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setChatAddress('');
-                  setChatBalance('0');
-                  if (walletAgent) {
-                    walletAgent.clearMessages();
-                  }
-                  updateMessages([]);
-                }}
-              >
-                Logout
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (walletAgent) {
+                  walletAgent.clearMessages();
+                }
+                updateMessages([]);
+              }}
+            >
+              Clear Chat
+            </Button>
           </div>
         </CardTitle>
       </CardHeader>
       {/* Signature Dialog */}
       <Dialog 
         open={showSignatureDialog} 
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           if (!open) {
             setPassword('');
           }
@@ -446,7 +405,7 @@ export default function ChatPage() {
                   type="password"
                   placeholder="Enter your wallet password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                   className="col-span-3"
                 />
               </div>
@@ -514,6 +473,9 @@ export default function ChatPage() {
         <div className="w-[30%] border-r pr-4">
           <ScrollArea className="h-full">
             <div className="space-y-6">
+              <WalletErrorBoundary>
+                <WalletDisplay />
+              </WalletErrorBoundary>
               {/* Official Agents */}
               <div className="space-y-2">
                 <h3 className="font-semibold flex items-center gap-2">
