@@ -119,9 +119,10 @@ export default function ChatPage() {
         timestamp: new Date().toISOString()
       };
       updateMessages([...messages, errorMessage]);
+      setChatBalance('Error');
       throw error;
     }
-  }, [walletManager]);
+  }, [walletManager, messages, updateMessages]);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);

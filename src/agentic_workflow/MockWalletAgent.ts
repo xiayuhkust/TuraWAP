@@ -67,9 +67,22 @@ Just let me know what you'd like to do!`;
       return "You need to create or import a wallet first. Type 'create wallet' to get started.";
     }
 
-    const balance = await this.walletManager.getBalance(address);
-    const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
-    return `💰 Your wallet (${shortAddress}) contains ${balance} TURA`;
+    try {
+      const balance = await this.walletManager.getBalance(address);
+      const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+
+      window.dispatchEvent(new CustomEvent('wallet-updated', { 
+        detail: { 
+          address: address,
+          balance: balance
+        }
+      }));
+
+      return `💰 Your wallet (${shortAddress}) contains ${balance} TURA`;
+    } catch (error) {
+      console.error('Failed to get balance:', error);
+      return `❌ ${error instanceof Error ? error.message : 'Failed to get balance. Please try again.'}`;
+    }
   }
 
   private async handleCreateWallet(password?: string): Promise<string> {
@@ -80,9 +93,10 @@ Just let me know what you'd like to do!`;
 
     try {
       const response = await this.walletManager.createWallet(password);
+      const balance = await this.walletManager.getBalance(response.address);
       return `🎉 Wallet created successfully!\nYour wallet address: ${response.address}\n\n` +
              `🔐 Your wallet is secured with your password. Don't forget it!\n\n` +
-             `Your initial balance is 0 TURA.`;
+             `Your initial balance is ${balance} TURA.`;
     } catch (error) {
       console.error('Error creating wallet:', error);
       return `❌ ${error instanceof Error ? error.message : 'Failed to create wallet. Please try again.'}`;
