@@ -451,7 +451,10 @@ export default function ChatPage() {
         {/* AgenticWorkflow Sidebar */}
         <div className="w-[30%] border-r pr-4">
           <ScrollArea className="h-full">
-            <div className="space-y-6">
+            <WalletErrorBoundary>
+              <WalletDisplay />
+            </WalletErrorBoundary>
+            <div className="space-y-6 mt-4">
               {/* Official Agents */}
               <div className="space-y-2">
                 <h3 className="font-semibold flex items-center gap-2">
@@ -461,11 +464,6 @@ export default function ChatPage() {
                 <div className="space-y-2">
                   {officialAgents.map(agent => (
                     <div key={agent.name}>
-                      {agent.name === 'WalletAgent' && (
-                        <WalletErrorBoundary>
-                          <WalletDisplay />
-                        </WalletErrorBoundary>
-                      )}
                       <div
                         className={`p-3 rounded-lg hover:bg-secondary/80 cursor-pointer transition-colors ${
                           activeAgent?.name === agent.name ? 'bg-secondary/90 ring-2 ring-primary' : 'bg-secondary'
