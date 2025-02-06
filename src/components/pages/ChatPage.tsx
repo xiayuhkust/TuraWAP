@@ -84,6 +84,7 @@ export default function ChatPage() {
   const [chatAddress, setChatAddress] = useState('');
   const [chatBalance, setChatBalance] = useState('0');
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
 
   // Listen for wallet updates and connection changes
   useEffect(() => {
@@ -115,6 +116,7 @@ export default function ChatPage() {
     const handleConnectionChange = (event: CustomEvent<{ connected: boolean }>) => {
       if (!isSubscribed) return;
       
+      setIsConnected(event.detail.connected);
       if (!event.detail.connected) {
         if (reconnectTimeout) {
           window.clearTimeout(reconnectTimeout);
@@ -491,6 +493,7 @@ export default function ChatPage() {
           <div className="flex items-center gap-2">
             {chatAddress && (
               <>
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
                 <div className="p-2 bg-secondary rounded-lg flex flex-col items-start">
                   <div className="text-xs text-muted-foreground">Account</div>
                   <div className="font-mono text-sm break-all">
