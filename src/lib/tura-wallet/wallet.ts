@@ -1,15 +1,6 @@
 import Web3 from 'web3';
 // Chain configuration
-const CHAIN_CONFIG = {
-  chainId: 1337,
-  chainName: 'Tura',
-  rpcUrl: 'https://43.135.26.222:8088',
-  nativeCurrency: {
-    name: 'TURA',
-    symbol: 'TURA',
-    decimals: 18
-  }
-};
+import { CHAIN_CONFIG } from '../../config/chain';
 
 export class WalletService {
   private web3: Web3;
