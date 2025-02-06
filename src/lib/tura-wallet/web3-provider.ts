@@ -1,12 +1,6 @@
 import Web3 from 'web3';
 import { CHAIN_CONFIG } from '../../config/chain';
 
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
-}
-
 type ProviderState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export class Web3ProviderService {
@@ -19,17 +13,12 @@ export class Web3ProviderService {
     try {
       this.state = 'connecting';
       
-      if (window.ethereum) {
-        this.provider = window.ethereum;
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-      } else {
-        const endpoint = CHAIN_CONFIG.rpcUrl;
-        if (!endpoint.startsWith('https://') && !endpoint.startsWith('/')) {
-          throw new Error('Production endpoints must use HTTPS');
-        }
-        this.provider = new Web3.providers.HttpProvider(endpoint);
+      const endpoint = CHAIN_CONFIG.rpcUrl;
+      if (!endpoint.startsWith('https://') && !endpoint.startsWith('/')) {
+        throw new Error('Production endpoints must use HTTPS');
       }
       
+      this.provider = new Web3.providers.HttpProvider(endpoint);
       this.web3 = new Web3(this.provider);
       await this.testConnection();
       this.state = 'connected';
@@ -55,9 +44,6 @@ export class Web3ProviderService {
   }
 
   public cleanup(): void {
-    if (this.provider?.disconnect) {
-      this.provider.disconnect();
-    }
     this.provider = null;
     this.web3 = null;
     this.state = 'disconnected';

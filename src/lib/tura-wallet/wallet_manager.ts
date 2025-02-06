@@ -109,10 +109,19 @@ export class WalletManagerImpl {
       const connected = await this.walletService.isConnected();
       if (!connected) {
         await this.walletService.ensureConnection();
+        await WalletState.getInstance().updateState({ 
+          isConnected: true,
+          address: await this.getCurrentAddress() || ''
+        });
       }
     } catch (error) {
       console.error('Failed to connect wallet:', error);
-      throw error;
+      await WalletState.getInstance().updateState({ 
+        isConnected: false,
+        address: '',
+        balance: '0'
+      });
+      throw error instanceof Error ? error : new Error('Failed to connect wallet');
     }
   }
 
