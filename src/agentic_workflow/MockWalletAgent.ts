@@ -16,6 +16,12 @@ const openai = new OpenAI({
 });
 
 export class MockWalletAgent extends AgenticWorkflow {
+  protected exampleTxt = [
+    "🔑 Create a new wallet",
+    "💰 Check your balance", 
+    "💸 Send TURA tokens to another address"
+  ];
+
   private state: { 
     type: 'idle' | 'awaiting_wallet_password' | 'awaiting_login_password';
     address?: string;
@@ -30,16 +36,6 @@ export class MockWalletAgent extends AgenticWorkflow {
     );
     
     this.walletManager = new WalletManagerImpl();
-  }
-
-  private getWelcomeMessage(): string {
-    return `I can help you manage your wallet! Here's what I can do:
-
-🔑 Create a new wallet
-💰 Check your balance
-💸 Send TURA tokens to another address
-
-Just let me know what you'd like to do!`;
   }
 
   private async handleLogin(address?: string): Promise<string> {
@@ -144,7 +140,7 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
 
   protected async handleIntent(_intent: Intent, text: string): Promise<string> {
     if (!text || text.trim() === '') {
-      return this.getWelcomeMessage();
+      return '';
     }
 
     // Handle password states
@@ -216,6 +212,6 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
       }
     }
     
-    return this.getWelcomeMessage();
+    return '';
   }
 }
