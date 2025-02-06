@@ -63,7 +63,7 @@ export class WalletManagerImpl {
     
     this.connectionCheckInterval = window.setInterval(async () => {
       try {
-        await this.walletService.web3.eth.net.isListening();
+        await this.walletService.isConnected();
         if (!this.isConnected) {
           this.isConnected = true;
           window.dispatchEvent(new CustomEvent('wallet-connection-changed', {
