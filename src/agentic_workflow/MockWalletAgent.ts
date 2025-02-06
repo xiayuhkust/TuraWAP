@@ -72,17 +72,20 @@ Just let me know what you'd like to do!`;
     return `💰 Your wallet (${shortAddress}) contains ${balance} TURA`;
   }
 
-  private async handleCreateWallet(): Promise<string> {
+  private async handleCreateWallet(password?: string): Promise<string> {
+    if (!password) {
+      this.state = { type: 'awaiting_wallet_password' };
+      return 'Please enter a password for your new wallet (minimum 8 characters):';
+    }
+
     try {
-      const password = 'defaultPassword'; // User should change this later
       const response = await this.walletManager.createWallet(password);
-      
       return `🎉 Wallet created successfully!\nYour wallet address: ${response.address}\n\n` +
-             `🔑 Important: Please change your wallet password for security.\n\n` +
+             `🔐 Your wallet is secured with your password. Don't forget it!\n\n` +
              `Your initial balance is 0 TURA.`;
     } catch (error) {
       console.error('Error creating wallet:', error);
-      return '❌ Failed to create wallet. Please try again.';
+      return `❌ ${error instanceof Error ? error.message : 'Failed to create wallet. Please try again.'}`;
     }
   }
 
@@ -133,7 +136,7 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
     // Handle password states
     if (this.state.type === 'awaiting_wallet_password') {
       this.state = { type: 'idle' };
-      return await this.handleCreateWallet();
+      return await this.handleCreateWallet(text);
     }
     
     if (this.state.type === 'awaiting_login_password') {

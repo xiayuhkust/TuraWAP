@@ -344,6 +344,14 @@ export class WalletManagerImpl {
           return null;
         }
 
+        // Check for inactivity timeout (30 minutes)
+        const lastActivity = parseInt(localStorage.getItem('last_activity') || '0');
+        const inactiveTime = Date.now() - lastActivity;
+        if (inactiveTime > 30 * 60 * 1000) { // 30 minutes
+          this.logout();
+          return null;
+        }
+
         if (sessionData.expires <= Date.now()) {
           console.log('Session expired:', {
             expires: new Date(sessionData.expires).toLocaleString(),
@@ -352,6 +360,8 @@ export class WalletManagerImpl {
           return null;
         }
 
+        // Update last activity timestamp
+        localStorage.setItem('last_activity', Date.now().toString());
         return sessionData;
       } catch {
         return null;
