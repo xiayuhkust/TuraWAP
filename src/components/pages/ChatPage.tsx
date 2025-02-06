@@ -84,17 +84,75 @@ export default function ChatPage() {
   const [chatAddress, setChatAddress] = useState('');
   const [chatBalance, setChatBalance] = useState('0');
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
 
-  // Listen for wallet updates from TuraWorkflow
+  // Listen for wallet updates and connection changes
   useEffect(() => {
+    let isSubscribed = true;
+    let reconnectTimeout: number | null = null;
+    
     const handleWalletUpdate = (event: CustomEvent<{ address: string; balance: string }>) => {
-      setChatAddress(event.detail.address);
-      setChatBalance(event.detail.balance);
+      if (!isSubscribed) return;
+      
+      try {
+        if (!event?.detail) {
+          console.warn('Received wallet update event without details');
+          return;
+        }
+        
+        const { address, balance } = event.detail;
+        if (!address || !balance) {
+          console.warn('Received wallet update with missing data:', { address, balance });
+          return;
+        }
+        
+        setChatAddress(address);
+        setChatBalance(balance);
+      } catch (error) {
+        console.error('Error handling wallet update:', error);
+      }
     };
     
-    window.addEventListener('wallet-updated', handleWalletUpdate as EventListener);
-    return () => window.removeEventListener('wallet-updated', handleWalletUpdate as EventListener);
-  }, []);
+    const handleConnectionChange = (event: CustomEvent<{ connected: boolean }>) => {
+      if (!isSubscribed) return;
+      
+      setIsConnected(event.detail.connected);
+      if (!event.detail.connected) {
+        if (reconnectTimeout) {
+          window.clearTimeout(reconnectTimeout);
+        }
+        reconnectTimeout = window.setTimeout(async () => {
+          if (chatAddress) {
+            try {
+              await updateBalanceWithMessage(chatAddress);
+            } catch (error) {
+              console.error('Failed to refresh balance after reconnect:', error);
+            }
+          }
+        }, 1000);
+      }
+    };
+    
+    try {
+      window.addEventListener('wallet-updated', handleWalletUpdate as EventListener);
+      window.addEventListener('wallet-connection-changed', handleConnectionChange as EventListener);
+    } catch (error) {
+      console.error('Failed to add wallet listeners:', error);
+    }
+    
+    return () => {
+      isSubscribed = false;
+      if (reconnectTimeout) {
+        window.clearTimeout(reconnectTimeout);
+      }
+      try {
+        window.removeEventListener('wallet-updated', handleWalletUpdate as EventListener);
+        window.removeEventListener('wallet-connection-changed', handleConnectionChange as EventListener);
+      } catch (error) {
+        console.error('Failed to remove wallet listeners:', error);
+      }
+    };
+  }, [chatAddress, updateBalanceWithMessage]);
   const [walletAgent] = useState(() => {
     const instance = officialAgents[0].instance;
     if (!(instance instanceof MockWalletAgent)) {
@@ -435,6 +493,7 @@ export default function ChatPage() {
           <div className="flex items-center gap-2">
             {chatAddress && (
               <>
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
                 <div className="p-2 bg-secondary rounded-lg flex flex-col items-start">
                   <div className="text-xs text-muted-foreground">Account</div>
                   <div className="font-mono text-sm break-all">

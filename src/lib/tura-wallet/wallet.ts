@@ -4,10 +4,68 @@ import { CHAIN_CONFIG } from '../../config/chain';
 
 export class WalletService {
   private web3: Web3;
+  private provider: any;
+  private connectionAttempts: number = 0;
+  private readonly maxReconnectAttempts = 3;
+  private readonly reconnectDelay = 1000;
 
   constructor() {
-    const provider = new Web3.providers.HttpProvider(CHAIN_CONFIG.rpcUrl);
-    this.web3 = new Web3(provider);
+    this.setupProvider();
+  }
+
+  public async isConnected(): Promise<boolean> {
+    try {
+      return await this.web3.eth.net.isListening();
+    } catch (error) {
+      return false;
+    }
+  }
+
+  public cleanup() {
+    if (this.provider?.disconnect) {
+      this.provider.disconnect();
+    }
+    if (this.provider?.removeAllListeners) {
+      this.provider.removeAllListeners();
+    }
+  }
+
+  private setupProvider() {
+    try {
+      this.cleanup();
+      const wsUrl = CHAIN_CONFIG.rpcUrl.replace('https://', 'wss://').replace('http://', 'ws://');
+      this.provider = new Web3.providers.WebsocketProvider(wsUrl, {
+        reconnect: {
+          auto: true,
+          delay: this.reconnectDelay,
+          maxAttempts: this.maxReconnectAttempts,
+        },
+        timeout: 5000,
+      });
+
+      this.web3 = new Web3(this.provider);
+      
+      this.provider.on('connect', () => {
+        console.log('Web3 provider connected');
+        this.connectionAttempts = 0;
+      });
+      
+      this.provider.on('error', (error: Error) => {
+        console.error('Web3 provider error:', error);
+      });
+      
+      this.provider.on('end', async () => {
+        console.warn('Web3 provider disconnected');
+        if (this.connectionAttempts < this.maxReconnectAttempts) {
+          this.connectionAttempts++;
+          await new Promise(resolve => setTimeout(resolve, this.reconnectDelay));
+          this.setupProvider();
+        }
+      });
+    } catch (error) {
+      console.error('Failed to setup Web3 provider:', error);
+      throw error;
+    }
   }
 
 
