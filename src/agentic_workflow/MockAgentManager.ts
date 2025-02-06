@@ -3,7 +3,7 @@ import { OpenAI } from 'openai';
 import { addAgentToStore, getAllAgents } from '../stores/agent-store';
 import { getWorkflowRuns } from '../stores/store-econ';
 import { AgentData } from '../types/agentTypes';
-import { VirtualWalletSystem } from '../lib/virtual-wallet-system';
+import { WalletManagerImpl } from '../lib/tura-wallet/wallet_manager';
 
 /// <reference types="vite/client" />
 
@@ -23,12 +23,12 @@ export class MockAgentManager extends AgenticWorkflow {
   };
 
   private readonly DEPLOYMENT_FEE = 0.1;
-  // Using inherited walletSystem from AgenticWorkflow
+  protected walletManager: WalletManagerImpl;
 
   constructor() {
     super("MockAgentManager", "Deploy and register TuraAgent contracts with metadata collection");
     this.registrationState = { step: 'idle', data: {} };
-    this.walletSystem = new VirtualWalletSystem();
+    this.walletManager = new WalletManagerImpl();
   }
 
   private generateContractAddress(): string {
@@ -89,7 +89,7 @@ Note: Be lenient with matching - if the user's intent is clear but phrasing is d
         return await this.handleRegistrationState(text);
       }
 
-      const address = this.walletSystem.getCurrentAddress();
+      const address = await this.walletManager.getCurrentAddress();
       if (!address && recognizedIntent.name !== 'general_help') {
         return "Please connect your wallet first to interact with agents.";
       }
@@ -103,10 +103,10 @@ Note: Be lenient with matching - if the user's intent is clear but phrasing is d
             return "Agent-only registration without contract deployment is not supported yet. Please use 'Deploy a new agent' to create and register an agent.";
           
           case 'list_agents':
-            return this.listRegisteredAgents();
+            return await this.listRegisteredAgents();
             
           case 'show_expenses':
-            return this.showExpenses();
+            return await this.showExpenses();
         }
       }
 
@@ -201,7 +201,7 @@ Deploying this agent will cost ${this.DEPLOYMENT_FEE} TURA. Type 'confirm' to pr
       case 'confirming_deployment': {
         const lowerText = text.toLowerCase().trim();
         if (lowerText === 'confirm') {
-          const address = this.walletSystem.getCurrentAddress();
+          const address = await this.walletManager.getCurrentAddress();
           if (!address) {
             this.registrationState = { step: 'idle', data: {} };
             return "❌ No wallet found. Please create a wallet first using the WalletAgent.";
@@ -213,8 +213,8 @@ Deploying this agent will cost ${this.DEPLOYMENT_FEE} TURA. Type 'confirm' to pr
           }
 
           try {
-            const balance = await this.walletSystem.getBalance(address);
-            if (balance < this.DEPLOYMENT_FEE) {
+            const balance = await this.walletManager.getBalance(address);
+            if (parseFloat(balance) < this.DEPLOYMENT_FEE) {
               this.registrationState = { step: 'idle', data: {} };
               return `❌ Insufficient balance. You need ${this.DEPLOYMENT_FEE} TURA to deploy an agent contract. Your current balance is ${balance} TURA.
 
@@ -222,11 +222,6 @@ Deploying this agent will cost ${this.DEPLOYMENT_FEE} TURA. Type 'confirm' to pr
             }
 
             const contractAddress = this.generateContractAddress();
-            const deductResult = await this.walletSystem.deductFee(address, this.DEPLOYMENT_FEE);
-
-            if (!deductResult.success) {
-              throw new Error('Failed to process deployment fee');
-            }
 
             const agentData: AgentData = {
               name: data.name,
@@ -258,7 +253,7 @@ Deploying this agent will cost ${this.DEPLOYMENT_FEE} TURA. Type 'confirm' to pr
               `Name: ${agentData.name}\n` +
               `Description: ${agentData.description}\n` +
               `Company: ${agentData.company}\n` +
-              `Remaining Balance: ${deductResult.newBalance} TURA\n\n` +
+              `Remaining Balance: ${balance} TURA\n\n` +
               `🔍 Next Steps:\n` +
               `1. View your agent details by saying "Show my agents"\n` +
               `2. Deploy another agent by saying "Deploy a new agent"`;
@@ -285,8 +280,8 @@ Deploying this agent will cost ${this.DEPLOYMENT_FEE} TURA. Type 'confirm' to pr
   }
 }
 
-  private listRegisteredAgents(): string {
-    const address = this.walletSystem.getCurrentAddress();
+  private async listRegisteredAgents(): Promise<string> {
+    const address = await this.walletManager.getCurrentAddress();
     if (!address) {
       return "Please connect your wallet to view your registered agents.";
     }
@@ -307,10 +302,8 @@ Deploying this agent will cost ${this.DEPLOYMENT_FEE} TURA. Type 'confirm' to pr
     ).join('\n\n')}`;
   }
 
-  // Removed checkAgentStatus functionality
-
-  private showExpenses(): string {
-    const address = this.walletSystem.getCurrentAddress();
+  private async showExpenses(): Promise<string> {
+    const address = await this.walletManager.getCurrentAddress();
     if (!address) {
       return "Please connect your wallet to view your expenses.";
     }

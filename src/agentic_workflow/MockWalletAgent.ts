@@ -1,7 +1,6 @@
 import { AgenticWorkflow, Intent } from './AgenticWorkflow';
 import { OpenAI } from 'openai';
-import { VirtualWalletSystem } from '../lib/virtual-wallet-system';
-import type { WalletResponse, SessionData } from '../lib/tura-wallet/wallet_manager';
+import { WalletManagerImpl } from '../lib/tura-wallet/wallet_manager';
 
 /// <reference types="vite/client" />
 
@@ -22,13 +21,15 @@ export class MockWalletAgent extends AgenticWorkflow {
     address?: string;
   } = { type: 'idle' };
 
+  private walletManager: WalletManagerImpl;
+
   constructor() {
     super(
       "MockWalletAgent",
       "Your personal wallet assistant - I can help you check balances, send TURA, and manage your wallet."
     );
     
-    this.walletSystem = new VirtualWalletSystem();
+    this.walletManager = new WalletManagerImpl();
   }
 
   private getWelcomeMessage(): string {
@@ -61,31 +62,23 @@ Just let me know what you'd like to do!`;
   }
 
   private async handleBalanceCheck(): Promise<string> {
-    const session = await this.walletSystem.getSession();
-    if (!session?.password) {
-      return "You need to log in to your wallet first. Please provide your wallet address and I'll help you log in.";
+    const address = await this.walletManager.getCurrentAddress();
+    if (!address) {
+      return "You need to create or import a wallet first. Type 'create wallet' to get started.";
     }
 
-    const walletAddress = (session as WalletResponse & SessionData).address;
-    const balance = await this.walletSystem.getBalance(walletAddress);
-    const shortAddress = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+    const balance = await this.walletManager.getBalance(address);
+    const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
     return `💰 Your wallet (${shortAddress}) contains ${balance} TURA`;
   }
 
-  private async handleCreateWallet(password?: string): Promise<string> {
+  private async handleCreateWallet(): Promise<string> {
     try {
-      if (!password) {
-        this.state = { type: 'awaiting_wallet_password' };
-        return "Please provide a password for your new wallet (minimum 8 characters):";
-      }
-
-      if (password.length < 8) {
-        return "Password must be at least 8 characters long. Please try again:";
-      }
-
-      const response = await this.walletSystem.createWallet(password);
+      const password = 'defaultPassword'; // User should change this later
+      const response = await this.walletManager.createWallet(password);
       
       return `🎉 Wallet created successfully!\nYour wallet address: ${response.address}\n\n` +
+             `🔑 Important: Please change your wallet password for security.\n\n` +
              `Your initial balance is 0 TURA.`;
     } catch (error) {
       console.error('Error creating wallet:', error);
@@ -140,7 +133,7 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
     // Handle password states
     if (this.state.type === 'awaiting_wallet_password') {
       this.state = { type: 'idle' };
-      return await this.handleCreateWallet(text);
+      return await this.handleCreateWallet();
     }
     
     if (this.state.type === 'awaiting_login_password') {
@@ -150,7 +143,7 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
         return "Something went wrong. Please try again.";
       }
       try {
-        await this.walletSystem.login(address, text);
+        await this.walletManager.login(address, text);
         return "✅ Successfully logged in! You can now check your balance or send tokens.";
       } catch (error) {
         return "❌ Login failed. Please check your password and try again.";
@@ -173,20 +166,25 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
             return "Please provide a valid wallet address and amount to send. For example: 'send 10 TURA to 0x...'";
           }
 
-          const session = await this.walletSystem.getSession();
-          if (!session?.password) {
-            return "You need to log in to your wallet first. Please provide your wallet address and I'll help you log in.";
+          const fromAddress = await this.walletManager.getCurrentAddress();
+          if (!fromAddress) {
+            return "You need to create or import a wallet first. Type 'create wallet' to get started.";
           }
 
           try {
-            const receipt = await this.walletSystem.transferTokens(
-              (session as WalletResponse & SessionData).address,
+            const session = await this.walletManager.getSession();
+            if (!session?.password) {
+              return "Please log in to your wallet first.";
+            }
+
+            const receipt = await this.walletManager.sendTransaction(
+              fromAddress,
               toAddressMatch[0],
-              parseFloat(amountMatch[0]),
+              amountMatch[0],
               session.password
             );
 
-            if (!receipt.success) {
+            if (!receipt.status) {
               return "❌ Transaction failed. Please try again.";
             }
 

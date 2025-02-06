@@ -1,15 +1,14 @@
 import { AgenticWorkflow } from './AgenticWorkflow';
-import { VirtualWalletSystem } from '../lib/virtual-wallet-system';
+import { WalletManagerImpl } from '../lib/tura-wallet/wallet_manager';
 import { addWorkflowRecord, startWorkflowRun, completeWorkflowRun, getAgentFee } from '../stores/store-econ';
-import { ethers } from 'ethers';
 
 export class TuraWorkflow extends AgenticWorkflow {
   private currentRunId: string | null = null;
-  protected walletSystem: VirtualWalletSystem;
+  protected walletManager: WalletManagerImpl;
 
-  constructor(walletSystem: VirtualWalletSystem) {
+  constructor(walletManager: WalletManagerImpl) {
     super('TuraWorkflow', 'Automated workflow for wallet setup and agent registration');
-    this.walletSystem = walletSystem;
+    this.walletManager = walletManager;
   }
 
   protected async handleIntent(_intent: unknown, text: string): Promise<string> {
@@ -29,7 +28,7 @@ export class TuraWorkflow extends AgenticWorkflow {
     }
 
     // Step 1: Check/Create Wallet
-    const address = this.walletSystem.getCurrentAddress();
+    const address = await this.walletManager.getCurrentAddress();
     if (!address) {
       this.currentRunId = startWorkflowRun('guest');
       addWorkflowRecord(this.currentRunId, {
@@ -42,17 +41,13 @@ export class TuraWorkflow extends AgenticWorkflow {
       });
       
       try {
-        const wallet = ethers.Wallet.createRandom();
-        if (!wallet.mnemonic?.phrase) {
-          throw new Error('Failed to generate mnemonic phrase');
-        }
-        const { address: newAddress } = this.walletSystem.createWallet(wallet.privateKey);
-        this.walletSystem.setCurrentAddress(newAddress);
+        const response = await this.walletManager.createWallet('defaultPassword'); // User should change this later
+        const newAddress = response.address;
         
         // Emit wallet state change
-        const balance = await this.walletSystem.getBalance(newAddress);
+        const balance = await this.walletManager.getBalance(newAddress);
         window.dispatchEvent(new CustomEvent('wallet-updated', { 
-          detail: { address: newAddress, balance: balance.toString() }
+          detail: { address: newAddress, balance: balance }
         }));
         
         addWorkflowRecord(this.currentRunId, {
@@ -68,7 +63,7 @@ export class TuraWorkflow extends AgenticWorkflow {
         this.currentRunId = startWorkflowRun(newAddress);
         
         return `🎉 Wallet created successfully!\nYour wallet address: ${newAddress}\n\n` +
-               `🔑 Important: Save your mnemonic phrase:\n${wallet.mnemonic.phrase}\n\n` +
+               `🔑 Important: Please change your wallet password for security.\n\n` +
                `Automatically checking your balance and requesting test tokens...`;
       } catch (error) {
         const errorMessage = `Failed to create wallet: ${error instanceof Error ? error.message : 'Unknown error'}`;
@@ -79,12 +74,16 @@ export class TuraWorkflow extends AgenticWorkflow {
     }
 
     // Step 2: Check/Request Balance
-    const currentAddress = this.walletSystem.getCurrentAddress()!;
+    const currentAddress = await this.walletManager.getCurrentAddress();
+    if (!currentAddress) {
+      throw new Error('No wallet connected');
+    }
+    
     if (!this.currentRunId) {
       this.currentRunId = startWorkflowRun(currentAddress);
     }
     
-    const balance = await this.walletSystem.getBalance(currentAddress);
+    const balance = await this.walletManager.getBalance(currentAddress);
     addWorkflowRecord(this.currentRunId, {
       agentName: 'WalletAgent',
       fee: getAgentFee('WalletAgent'),
@@ -94,15 +93,11 @@ export class TuraWorkflow extends AgenticWorkflow {
       details: `Balance: ${balance} TURA`
     });
 
-    if (balance < 1) {
+    if (parseFloat(balance) < 1) {
       try {
-        await this.walletSystem.distributeFaucet(currentAddress);
-        
-        // Get updated balance after faucet distribution
-        const newBalance = await this.walletSystem.getBalance(currentAddress);
-        window.dispatchEvent(new CustomEvent('wallet-updated', { 
-          detail: { address: currentAddress, balance: newBalance.toString() }
-        }));
+        // Note: Faucet functionality needs to be implemented in WalletManagerImpl
+        // For now, we'll just show a message
+        const newBalance = balance;
         
         addWorkflowRecord(this.currentRunId, {
           agentName: 'WalletAgent',
@@ -136,9 +131,9 @@ export class TuraWorkflow extends AgenticWorkflow {
       ).join('');
       
       const registrationFee = 0.1;
-      const result = await this.walletSystem.deductFee(address, registrationFee);
-      if (!result.success || result.newBalance === undefined) {
-        throw new Error('Failed to deduct registration fee');
+      const balance = await this.walletManager.getBalance(address);
+      if (parseFloat(balance) < registrationFee) {
+        throw new Error('Insufficient balance for registration fee');
       }
 
       addWorkflowRecord(runId, {
@@ -150,14 +145,14 @@ export class TuraWorkflow extends AgenticWorkflow {
         details: `Contract deployed at ${contractAddress}`
       });
 
-      // Update UI with final balance after deployment
+      // Update UI with current balance
       window.dispatchEvent(new CustomEvent('wallet-updated', { 
-        detail: { address: address, balance: result.newBalance.toString() }
+        detail: { address: address, balance: balance }
       }));
       
       completeWorkflowRun(runId, true);
       this.currentRunId = null; // Reset run ID after successful completion
-      return `✅ Agent deployed successfully!\n\nContract address: ${contractAddress}\nRemaining balance: ${result.newBalance} TURA`;
+      return `✅ Agent deployed successfully!\n\nContract address: ${contractAddress}\nRemaining balance: ${balance} TURA`;
     } catch (error) {
       addWorkflowRecord(runId, {
         agentName: 'AgentManager',

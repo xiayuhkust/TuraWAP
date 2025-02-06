@@ -15,89 +15,11 @@ export class WalletService {
   private web3: Web3;
 
   constructor() {
-    // Try to use window.ethereum if available, otherwise fall back to HTTP provider
-    let provider;
-    
-    console.log('Initializing Web3 with chain config:', {
-      chainId: CHAIN_CONFIG.chainId,
-      chainName: CHAIN_CONFIG.chainName,
-      rpcUrl: CHAIN_CONFIG.rpcUrl,
-      nativeCurrency: CHAIN_CONFIG.nativeCurrency
-    });
-    
-    if (typeof window !== 'undefined' && window.ethereum) {
-      provider = window.ethereum;
-      console.log('Using window.ethereum provider');
-      
-      // Request account access and setup network
-      this.setupMetaMask().catch(error => {
-        console.error('Failed to setup MetaMask:', error);
-        console.log('Falling back to HTTP provider');
-        provider = new Web3.providers.HttpProvider(CHAIN_CONFIG.rpcUrl);
-        this.web3 = new Web3(provider);
-      });
-    } else {
-      console.log('MetaMask not detected, using HTTP provider');
-      provider = new Web3.providers.HttpProvider(CHAIN_CONFIG.rpcUrl);
-    }
-    
+    const provider = new Web3.providers.HttpProvider(CHAIN_CONFIG.rpcUrl);
     this.web3 = new Web3(provider);
   }
 
-  private async setupMetaMask() {
-    try {
-      console.log('Setting up MetaMask...');
-      
-      // Request account access
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      console.log('MetaMask account access granted:', {
-        accounts: accounts.map((a: string) => `${a.slice(0, 6)}...${a.slice(-4)}`)
-      });
 
-      // Add Tura network if not already added
-      const chainIdHex = `0x${CHAIN_CONFIG.chainId.toString(16)}`;
-      console.log('Checking for Tura network:', { chainIdHex });
-      
-      try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: chainIdHex }],
-        });
-        console.log('Successfully switched to Tura network');
-      } catch (switchError: any) {
-        console.log('Switch network error:', { code: switchError.code, message: switchError.message });
-        
-        // This error code indicates that the chain has not been added to MetaMask
-        if (switchError.code === 4902) {
-          console.log('Adding Tura network to MetaMask...');
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: chainIdHex,
-              chainName: CHAIN_CONFIG.chainName,
-              nativeCurrency: CHAIN_CONFIG.nativeCurrency,
-              rpcUrls: [CHAIN_CONFIG.rpcUrl]
-            }]
-          });
-          console.log('Successfully added Tura network');
-        } else {
-          console.error('Failed to switch to Tura network:', switchError);
-          throw switchError;
-        }
-      }
-      
-      // Verify we're on the correct network
-      const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
-      if (currentChainId !== chainIdHex) {
-        throw new Error(`Network verification failed. Expected ${chainIdHex}, got ${currentChainId}`);
-      }
-      console.log('Network verification successful');
-      
-    } catch (error) {
-      console.error('Failed to setup MetaMask:', error);
-      throw error;
-    }
-  }
 
   async createAccount(privateKey?: string) {
     try {
