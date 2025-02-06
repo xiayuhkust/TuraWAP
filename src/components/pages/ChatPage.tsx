@@ -641,7 +641,10 @@ export default function ChatPage() {
                   key={index}
                   variant="outline"
                   size="sm"
-                  onClick={() => setInputText(text)}
+                  onClick={async () => {
+                    setInputText(text);
+                    await handleSendMessage();
+                  }}
                 >
                   {text}
                 </Button>
@@ -678,7 +681,7 @@ export default function ChatPage() {
 
           </div>
           
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 mt-4 relative z-10">
             <Button
               variant="outline"
               size="icon"
