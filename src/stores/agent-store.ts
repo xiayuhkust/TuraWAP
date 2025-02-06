@@ -9,7 +9,7 @@ import { TuraWorkflow } from "../agentic_workflow/TuraWorkflow";
 // Official agents are managed separately from community agents
 export const officialAgents: OfficialAgent[] = [
   {
-    name: 'WalletAgent',
+    name: 'WorkFlow & Agent',
     contractAddress: '',  // No contract address as it's a built-in agent
     description: 'Your personal wallet assistant for managing TURA transactions',
     feePerRequest: '0.0 TURA',
