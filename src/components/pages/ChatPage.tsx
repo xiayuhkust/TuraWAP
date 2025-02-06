@@ -84,7 +84,6 @@ export default function ChatPage() {
   const [chatAddress, setChatAddress] = useState('');
   const [chatBalance, setChatBalance] = useState('0');
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
-  const [lastMessageTime, setLastMessageTime] = useState<number>(Date.now());
 
   // Listen for wallet updates from TuraWorkflow
   useEffect(() => {
@@ -129,7 +128,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitialized = useRef(false);
 
-  // Initialize chat and set up balance refresh interval
+  // Initialize chat
   useEffect(() => {
     const initializeChat = async () => {
       if (hasInitialized.current) return;
@@ -174,20 +173,7 @@ export default function ChatPage() {
     };
 
     initializeChat();
-
-    const refreshInterval = setInterval(async () => {
-      const timeSinceLastMessage = Date.now() - lastMessageTime;
-      if (timeSinceLastMessage < 30000 && chatAddress) {
-        try {
-          await updateBalanceWithMessage(chatAddress);
-        } catch (error) {
-          console.error('Failed to refresh balance:', error);
-        }
-      }
-    }, 5000);
-
-    return () => clearInterval(refreshInterval);
-  }, [walletManager, walletAgent, lastMessageTime, chatAddress, messages.length, updateBalanceWithMessage, updateMessages]);
+  }, [walletManager, walletAgent, updateBalanceWithMessage, updateMessages]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -199,7 +185,6 @@ export default function ChatPage() {
 
     const text = inputText.trim();
     setInputText('');
-    setLastMessageTime(Date.now());
 
     try {
         // Handle "Start Workflow" command
@@ -228,15 +213,6 @@ export default function ChatPage() {
             setChatAddress(storedAddress || '');
           }
           
-          if (chatAddress) {
-            try {
-              setIsRefreshingBalance(true);
-              await updateBalanceWithMessage(chatAddress);
-            } finally {
-              setIsRefreshingBalance(false);
-            }
-          }
-
           const newMessages = walletAgent.getMessages();
           updateMessages(newMessages);
         } else {
