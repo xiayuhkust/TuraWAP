@@ -13,6 +13,14 @@ export class WalletService {
     this.setupProvider();
   }
 
+  public async isConnected(): Promise<boolean> {
+    try {
+      return await this.web3.eth.net.isListening();
+    } catch (error) {
+      return false;
+    }
+  }
+
   public cleanup() {
     if (this.provider?.disconnect) {
       this.provider.disconnect();
