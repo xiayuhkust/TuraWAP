@@ -494,16 +494,15 @@ export default function ChatPage() {
                     </div>
                   ))}
                 </div>
-              </div>
 
-              {/* Community Agents */}
-              <div className="space-y-2">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Bot className="h-4 w-4" />
-                  Community Agents
-                </h3>
+                {/* Community Agents */}
                 <div className="space-y-2">
-                  {agents.map(agent => (
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Bot className="h-4 w-4" />
+                    Community Agents
+                  </h3>
+                  <div className="space-y-2">
+                    {agents.map(agent => (
                     <div
                       key={agent.contractAddress}
                       className={`p-3 rounded-lg hover:bg-secondary/80 cursor-pointer transition-colors ${
@@ -534,18 +533,18 @@ export default function ChatPage() {
                         Fee: {agent.feePerRequest}
                       </div>
                     </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Workflows */}
-              <div className="space-y-2">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Code2 className="h-4 w-4" />
-                  Workflows
-                </h3>
+                {/* Workflows */}
                 <div className="space-y-2">
-                  {workflows.map((workflow: Workflow) => (
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Code2 className="h-4 w-4" />
+                    Workflows
+                  </h3>
+                  <div className="space-y-2">
+                    {workflows.map((workflow: Workflow) => (
                     <div
                       key={workflow.contractAddress}
                       className={`p-3 rounded-lg hover:bg-secondary/80 cursor-pointer transition-colors ${
@@ -575,15 +574,14 @@ export default function ChatPage() {
                       <div className="text-xs text-muted-foreground mt-1">
                         Fee: {workflow.fee} • Confirmations: {workflow.requiredConfirmations}
                       </div>
-                      
                     </div>
                   ))}
+                  </div>
                 </div>
-              </div>
-              {activeAgent?.name === 'TuraWorkflow' && (
-                <div className="relative w-full mt-4">
-                  <Button
-                    className="w-full"
+                {activeAgent?.name === 'TuraWorkflow' && (
+                  <div className="relative w-full mt-4">
+                    <Button
+                      className="w-full"
                     onMouseDown={() => {
                       setPressProgress(0);
                       const startTime = Date.now();
@@ -632,7 +630,7 @@ export default function ChatPage() {
                     />
                   )}
                 </div>
-              )}
+              </div>
             </div>
           </ScrollArea>
         </div>
