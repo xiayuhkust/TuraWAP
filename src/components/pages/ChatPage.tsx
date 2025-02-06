@@ -368,8 +368,8 @@ export default function ChatPage() {
       {/* Dedicated WalletDisplay Section */}
       <div className="border-b px-4 py-2 flex items-center">
         <div className="w-[30%] flex items-center gap-2">
-          <Wallet className="h-4 w-4" />
-          <span className="font-medium">WalletAgent</span>
+          <Bot className="h-4 w-4" />
+          <span className="font-medium">WorkFlow & Agent</span>
         </div>
         <div className="w-[70%]">
           <WalletErrorBoundary>
@@ -491,8 +491,7 @@ export default function ChatPage() {
                         }}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <div className="font-medium flex items-center gap-2">
-                            <Wallet className="h-4 w-4" />
+                          <div className="font-medium">
                             {agent.name}
                           </div>
                           <Badge variant="secondary" className="text-xs">
