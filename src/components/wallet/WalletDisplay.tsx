@@ -32,20 +32,32 @@ export const WalletDisplay: React.FC = () => {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium">Address:</span>
-            <span className="text-sm">{walletInfo.address}</span>
+            <span className="text-sm">
+              {`${walletInfo.address.slice(0, 6)}...${walletInfo.address.slice(-4)}`}
+            </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium">Balance:</span>
             <span className="text-sm">{walletInfo.balance} TURA</span>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh}
-            disabled={!walletInfo.isConnected}
-          >
-            Refresh Balance
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={!walletInfo.isConnected}
+            >
+              Refresh Balance
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigator.clipboard.writeText(walletInfo.address)}
+              disabled={!walletInfo.isConnected}
+            >
+              Copy Address
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

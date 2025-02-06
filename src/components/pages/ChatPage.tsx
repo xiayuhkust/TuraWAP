@@ -363,21 +363,6 @@ export default function ChatPage() {
         <CardTitle className="flex items-center gap-2">
           <Bot className="h-6 w-6" />
           {activeAgent ? activeAgent.name : 'Chat'}
-          
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (walletAgent) {
-                  walletAgent.clearMessages();
-                }
-                updateMessages([]);
-              }}
-            >
-              Clear Chat
-            </Button>
-          </div>
         </CardTitle>
       </CardHeader>
       {/* Signature Dialog */}
@@ -467,15 +452,15 @@ export default function ChatPage() {
         <div className="w-[30%] border-r pr-4">
           <ScrollArea className="h-full">
             <div className="space-y-6">
-              <WalletErrorBoundary>
-                <WalletDisplay />
-              </WalletErrorBoundary>
               {/* Official Agents */}
               <div className="space-y-2">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Bot className="h-4 w-4" />
                   Official Agents
                 </h3>
+                <WalletErrorBoundary>
+                  <WalletDisplay />
+                </WalletErrorBoundary>
                 <div className="space-y-2">
                   {officialAgents.map(agent => (
                     <div
@@ -703,6 +688,19 @@ export default function ChatPage() {
             />
             <Button onClick={handleSendMessage} disabled={isLoading}>
               <Send className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                if (walletAgent) {
+                  walletAgent.clearMessages();
+                }
+                updateMessages([]);
+              }}
+              disabled={isLoading}
+            >
+              Clear
             </Button>
           </div>
         </div>
