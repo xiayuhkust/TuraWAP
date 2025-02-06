@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite'
-import type { UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
@@ -11,6 +10,7 @@ export default defineConfig({
     },
   },
   server: {
+    https: process.env.NODE_ENV === 'production',
     proxy: {
       '/rpc': {
         target: 'https://rpc-dev.turablockchain.com',
