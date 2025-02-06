@@ -457,7 +457,7 @@ export default function ChatPage() {
             <ScrollArea className="h-full">
               <div className="space-y-6">
                 {/* Official Agents */}
-              <div className="space-y-2">
+                <div className="space-y-2">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Bot className="h-4 w-4" />
                   Official Agents
