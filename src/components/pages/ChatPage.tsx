@@ -439,13 +439,7 @@ export default function ChatPage() {
                       setPassword('');
                       setShowSignatureDialog(false);
                       
-                      if (chatAddress) {
-                        try {
-                          await updateBalanceWithMessage(chatAddress);
-                        } catch (error) {
-                          console.error('Failed to refresh balance after transaction:', error);
-                        }
-                      }
+                      // Balance updates are now handled by WalletDisplay component
                     } catch (error) {
                       console.error('Transaction failed:', error);
                       const errorMessage: Message = {
@@ -494,25 +488,9 @@ export default function ChatPage() {
                         if (!agentInstance || !(agentInstance instanceof AgenticWorkflow)) {
                           return;
                         }
-                        agentInstance.setCurrentAddress(chatAddress);
                         setActiveAgent(agent);
-                        if (agent.name === 'WalletAgent') {
-                          if (chatAddress) {
-                            try {
-                              await updateBalanceWithMessage(chatAddress);
-                            } catch (error) {
-                              console.error('Failed to refresh balance on agent switch:', error);
-                            }
-                          }
-                          // Only show messages if there are any, don't trigger help again
-                          const existingMessages = agentInstance.getMessages();
-                          if (existingMessages.length > 0) {
-                            updateMessages(existingMessages);
-                          }
-                        } else {
-                          const newMessages = agentInstance.getMessages();
-                          updateMessages(newMessages);
-                        }
+                        const newMessages = agentInstance.getMessages();
+                        updateMessages(newMessages);
                       }}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -552,19 +530,7 @@ export default function ChatPage() {
                           return;
                         }
                         setActiveAgent(agent);
-                        if (agent.name === 'WalletAgent' && chatAddress) {
-                          try {
-                            await updateBalanceWithMessage(chatAddress);
-                          } catch (error) {
-                            console.error('Failed to refresh balance on agent switch:', error);
-                            const errorMessage: Message = {
-                              text: `Failed to refresh balance: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                              sender: 'agent',
-                              timestamp: new Date().toISOString()
-                            };
-                            updateMessages([...messages, errorMessage]);
-                          }
-                        }
+                        // Balance updates are now handled by WalletDisplay component
                         const newMessages = agentInstance.getMessages();
                         updateMessages(newMessages);
                       }}
@@ -606,19 +572,7 @@ export default function ChatPage() {
                           return;
                         }
                         setActiveAgent(workflow);
-                        if (workflow.name === 'WalletAgent' && chatAddress) {
-                          try {
-                            await updateBalanceWithMessage(chatAddress);
-                          } catch (error) {
-                            console.error('Failed to refresh balance on agent switch:', error);
-                            const errorMessage: Message = {
-                              text: `Failed to refresh balance: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                              sender: 'agent',
-                              timestamp: new Date().toISOString()
-                            };
-                            updateMessages([...messages, errorMessage]);
-                          }
-                        }
+                        // Balance updates are now handled by WalletDisplay component
                         const newMessages = workflowInstance.getMessages();
                         updateMessages(newMessages);
                       }}
