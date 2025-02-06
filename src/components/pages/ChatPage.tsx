@@ -366,10 +366,16 @@ export default function ChatPage() {
         </CardTitle>
       </CardHeader>
       {/* Dedicated WalletDisplay Section */}
-      <div className="border-b px-4 py-2">
-        <WalletErrorBoundary>
-          <WalletDisplay />
-        </WalletErrorBoundary>
+      <div className="border-b px-4 py-2 flex items-center">
+        <div className="w-[30%] flex items-center gap-2">
+          <Wallet className="h-4 w-4" />
+          <span className="font-medium">WalletAgent</span>
+        </div>
+        <div className="w-[70%]">
+          <WalletErrorBoundary>
+            <WalletDisplay />
+          </WalletErrorBoundary>
+        </div>
       </div>
       {/* Signature Dialog */}
       <Dialog 
@@ -461,9 +467,7 @@ export default function ChatPage() {
               <Bot className="h-4 w-4" />
               Official Agents
             </h3>
-            <WalletErrorBoundary>
-              <WalletDisplay />
-            </WalletErrorBoundary>
+
           </div>
           <ScrollArea className="h-[calc(100vh-16rem)]">
             <div className="space-y-6">
