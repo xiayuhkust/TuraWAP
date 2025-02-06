@@ -92,22 +92,7 @@ export default function ChatPage() {
         }
       });
 
-      try {
-        const welcomeResponse = await walletAgent.processMessage('help');
-        updateMessages([{
-          text: welcomeResponse,
-          sender: 'agent',
-          timestamp: new Date().toISOString()
-        }]);
-      } catch (error) {
-        console.error('Failed to initialize chat:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        updateMessages([{
-          text: `Failed to initialize chat: ${errorMessage}. Please try refreshing the page.`,
-          sender: 'agent',
-          timestamp: new Date().toISOString()
-        }]);
-      }
+      // No welcome message needed since we have example buttons
     };
 
     initializeChat();
@@ -648,7 +633,22 @@ export default function ChatPage() {
 
         {/* Chat Area */}
         <div className="flex-1 flex flex-col">
-          <div className="relative flex-1">
+          {/* Example Text Buttons */}
+          <div className="h-[15%] border-b p-4 flex flex-wrap gap-2">
+            {activeAgent?.instance instanceof AgenticWorkflow && 
+              activeAgent.instance.exampleTxt.map((text, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInputText(text)}
+                >
+                  {text}
+                </Button>
+              ))}
+          </div>
+          {/* Chat Messages Area */}
+          <div className="h-[85%] relative flex-1">
             <ScrollArea className="h-[calc(100vh-16rem)] pr-4">
               <div className="space-y-4 pb-16">
                 {messages.map((message) => (
@@ -711,6 +711,7 @@ export default function ChatPage() {
             >
               Clear
             </Button>
+          </div>
           </div>
         </div>
       </CardContent>

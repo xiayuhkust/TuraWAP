@@ -17,6 +17,12 @@ if (!import.meta.env?.VITE_OPENAI_API_KEY) {
 }
 
 export class MockAgentManager extends AgenticWorkflow {
+  protected exampleTxt = [
+    "Deploy a new agent",
+    "Show my agents",
+    "Show expenses"
+  ];
+
   private registrationState: {
     step: 'idle' | 'collecting_name' | 'collecting_description' | 'collecting_company' | 'collecting_socials' | 'confirming_deployment';
     data: Partial<AgentData>;

@@ -16,6 +16,7 @@ export abstract class AgenticWorkflow {
   public name: string;
   public description: string;
   protected agentConversation: Message[];
+  protected abstract exampleTxt: string[];
   private storageKey: string = '';
   private currentAddress: string | null;
 
