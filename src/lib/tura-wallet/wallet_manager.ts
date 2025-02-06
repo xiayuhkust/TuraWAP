@@ -1,6 +1,6 @@
 import { WalletService } from './wallet';
-import * as bip39 from 'bip39';
-import { Buffer } from 'buffer';
+const bip39 = require('bip39');
+const { Buffer } = require('buffer');
 
 // Ensure Buffer is available globally
 if (typeof window !== 'undefined') {
@@ -293,6 +293,22 @@ export class WalletManagerImpl {
         throw new Error(`Failed to get balance: ${error.message}`);
       }
       throw new Error('Failed to get balance');
+    }
+  }
+
+  async getCurrentAddress(): Promise<string | null> {
+    try {
+      // Get address from MetaMask if available
+      if (typeof window !== 'undefined' && window.ethereum) {
+        const accounts = await window.ethereum.request({ 
+          method: 'eth_requestAccounts' 
+        });
+        return accounts[0] || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to get current address:', error);
+      return null;
     }
   }
 

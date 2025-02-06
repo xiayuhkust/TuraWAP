@@ -1,7 +1,6 @@
 import { AgenticWorkflow, Intent } from './AgenticWorkflow';
 import { OpenAI } from 'openai';
-import { VirtualWalletSystem } from '../lib/virtual-wallet-system';
-import type { WalletResponse, SessionData } from '../lib/tura-wallet/wallet_manager';
+import { WalletManagerImpl, WalletResponse, SessionData } from '../lib/tura-wallet/wallet_manager';
 
 /// <reference types="vite/client" />
 
@@ -22,13 +21,15 @@ export class MockWalletAgent extends AgenticWorkflow {
     address?: string;
   } = { type: 'idle' };
 
+  private walletManager: WalletManagerImpl;
+
   constructor() {
     super(
       "MockWalletAgent",
       "Your personal wallet assistant - I can help you check balances, send TURA, and manage your wallet."
     );
     
-    this.walletSystem = new VirtualWalletSystem();
+    this.walletManager = new WalletManagerImpl();
   }
 
   private getWelcomeMessage(): string {
@@ -61,35 +62,35 @@ Just let me know what you'd like to do!`;
   }
 
   private async handleBalanceCheck(): Promise<string> {
-    const session = await this.walletSystem.getSession();
-    if (!session?.password) {
-      return "You need to log in to your wallet first. Please provide your wallet address and I'll help you log in.";
+    const address = await this.walletManager.getCurrentAddress();
+    if (!address) {
+      return "You need to connect your MetaMask wallet first. Click the MetaMask icon in your browser to connect.";
     }
 
-    const walletAddress = (session as WalletResponse & SessionData).address;
-    const balance = await this.walletSystem.getBalance(walletAddress);
-    const shortAddress = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+    const balance = await this.walletManager.getBalance(address);
+    const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
     return `💰 Your wallet (${shortAddress}) contains ${balance} TURA`;
   }
 
-  private async handleCreateWallet(password?: string): Promise<string> {
+  private async handleCreateWallet(): Promise<string> {
     try {
-      if (!password) {
-        this.state = { type: 'awaiting_wallet_password' };
-        return "Please provide a password for your new wallet (minimum 8 characters):";
+      if (!window.ethereum) {
+        return "❌ MetaMask is required. Please install MetaMask and refresh the page.";
       }
 
-      if (password.length < 8) {
-        return "Password must be at least 8 characters long. Please try again:";
-      }
-
-      const response = await this.walletSystem.createWallet(password);
+      const accounts = await window.ethereum.request({ 
+        method: 'eth_requestAccounts' 
+      });
       
-      return `🎉 Wallet created successfully!\nYour wallet address: ${response.address}\n\n` +
+      if (!accounts || accounts.length === 0) {
+        return "❌ Please connect your MetaMask wallet to continue.";
+      }
+
+      return `🎉 Wallet connected successfully!\nYour wallet address: ${accounts[0]}\n\n` +
              `Your initial balance is 0 TURA.`;
     } catch (error) {
-      console.error('Error creating wallet:', error);
-      return '❌ Failed to create wallet. Please try again.';
+      console.error('Error connecting wallet:', error);
+      return '❌ Failed to connect wallet. Please try again.';
     }
   }
 
@@ -140,7 +141,7 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
     // Handle password states
     if (this.state.type === 'awaiting_wallet_password') {
       this.state = { type: 'idle' };
-      return await this.handleCreateWallet(text);
+      return await this.handleCreateWallet();
     }
     
     if (this.state.type === 'awaiting_login_password') {

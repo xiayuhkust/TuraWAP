@@ -1,4 +1,4 @@
-import Web3 from 'web3';
+const Web3 = require('web3');
 // Chain configuration
 const CHAIN_CONFIG = {
   chainId: 1337,
@@ -12,7 +12,7 @@ const CHAIN_CONFIG = {
 };
 
 export class WalletService {
-  private web3: Web3;
+  private web3: typeof Web3;
 
   constructor() {
     // Try to use window.ethereum if available, otherwise fall back to HTTP provider
