@@ -475,7 +475,7 @@ export default function ChatPage() {
                           <div className="font-medium">
                             {agent.name}
                           </div>
-                          <Badge variant="secondary" className={`text-xs ${agent.status === 'OFFICIAL' ? 'bg-[#ffd700]' : agent.status === 'VALID' ? 'bg-[#00ff00]' : ''}`}>
+                          <Badge variant="secondary" className={`text-xs ${agent.status === 'OFFICIAL' ? 'bg-[#ffd700] text-black' : agent.status === 'VALID' ? 'bg-[#00ff00] text-black' : ''}`}>
                             {agent.status}
                           </Badge>
                         </div>
