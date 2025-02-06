@@ -110,7 +110,7 @@ export default function ChatPage() {
 
     try {
         // Handle "Start Workflow" command
-        if (text.toLowerCase() === 'start workflow') {
+        if (text && text.toLowerCase() === 'start workflow') {
           if (!turaWorkflow.current) return;
           const result = await turaWorkflow.current.processMessage('start workflow');
           const message: ChatMessage = {
@@ -128,7 +128,7 @@ export default function ChatPage() {
             return;
           }
           // Local wallet handles messages
-          await walletAgent.processMessage(text);
+          await walletAgent.processMessage(messageText);
           const newMessages = walletAgent.getMessages();
           updateMessages(newMessages);
         } else {
@@ -138,7 +138,7 @@ export default function ChatPage() {
           }
           
           try {
-            await agentInstance.processMessage(text);
+            await agentInstance.processMessage(messageText);
             const newMessages = agentInstance.getMessages();
             updateMessages(newMessages);
           } catch (error) {
