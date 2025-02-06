@@ -139,7 +139,6 @@ Note: You must have a connected wallet with sufficient TURA balance (0.1 TURA) t
   private async handleRegistrationState(text: string): Promise<string> {
     try {
       const { step, data } = this.registrationState;
-
       switch (step) {
         case 'collecting_name':
           if (!text.trim()) {
@@ -273,12 +272,7 @@ Deploying this agent will cost ${this.DEPLOYMENT_FEE} TURA. Type 'confirm' to pr
       default:
         return "Something went wrong. Please start over by saying 'Deploy a new agent'.";
     }
-  } catch (error) {
-    console.error('Registration state error:', error);
-    this.registrationState = { step: 'idle', data: {} };
-    return `An error occurred during registration: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`;
   }
-}
 
   private async listRegisteredAgents(): Promise<string> {
     const address = await this.walletManager.getCurrentAddress();
