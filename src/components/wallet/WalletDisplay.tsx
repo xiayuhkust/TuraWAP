@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { WalletState, WalletInfo } from '../../lib/tura-wallet/wallet_state';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 
 export const WalletDisplay: React.FC = () => {
   const [walletInfo, setWalletInfo] = useState<WalletInfo>({
@@ -26,40 +26,31 @@ export const WalletDisplay: React.FC = () => {
   if (!walletInfo.address) return null;
   
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Wallet</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium">Address:</span>
-            <span className="text-sm">
-              {`${walletInfo.address.slice(0, 6)}...${walletInfo.address.slice(-4)}`}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium">Balance:</span>
-            <span className="text-sm">{walletInfo.balance} TURA</span>
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRefresh}
-              disabled={!walletInfo.isConnected}
-            >
-              Refresh Balance
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigator.clipboard.writeText(walletInfo.address)}
-              disabled={!walletInfo.isConnected}
-            >
-              Copy Address
-            </Button>
-          </div>
+    <Card className="p-3">
+      <CardContent className="p-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">
+            {`${walletInfo.address.slice(0, 6)}...${walletInfo.address.slice(-4)}`}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2"
+            onClick={() => navigator.clipboard.writeText(walletInfo.address)}
+            disabled={!walletInfo.isConnected}
+          >
+            Copy
+          </Button>
+          <span className="text-sm ml-auto">{walletInfo.balance} TURA</span>
+          <Button 
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2"
+            onClick={handleRefresh}
+            disabled={!walletInfo.isConnected}
+          >
+            Refresh
+          </Button>
         </div>
       </CardContent>
     </Card>
