@@ -3,7 +3,7 @@ import Web3 from 'web3';
 import { CHAIN_CONFIG } from '../../config/chain';
 
 export class WalletService {
-  private web3: Web3;
+  private web3!: Web3;
   private provider: any;
   private connectionAttempts: number = 0;
   private readonly maxReconnectAttempts = 3;
@@ -33,15 +33,30 @@ export class WalletService {
   private setupProvider() {
     try {
       this.cleanup();
-      const wsUrl = CHAIN_CONFIG.rpcUrl.replace('https://', 'wss://').replace('http://', 'ws://');
+      
+      // Handle both relative and absolute URLs
+      const baseUrl = CHAIN_CONFIG.rpcUrl.startsWith('/')
+        ? window.location.origin + CHAIN_CONFIG.rpcUrl
+        : CHAIN_CONFIG.rpcUrl;
+      
+      const wsUrl = baseUrl.replace('https://', 'wss://').replace('http://', 'ws://');
+      console.log('Connecting to WebSocket URL:', wsUrl);
+      
       this.provider = new Web3.providers.WebsocketProvider(wsUrl, {
+        clientConfig: {
+          keepalive: true,
+          keepaliveInterval: this.reconnectDelay,
+          maxReceivedFrameSize: 100000000,
+          maxReceivedMessageSize: 100000000,
+        },
         reconnect: {
           auto: true,
           delay: this.reconnectDelay,
           maxAttempts: this.maxReconnectAttempts,
+          onTimeout: true
         },
         timeout: 5000,
-      });
+      } as any);
 
       this.web3 = new Web3(this.provider);
       
