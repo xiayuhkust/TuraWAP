@@ -296,6 +296,35 @@ export class WalletManagerImpl {
     }
   }
 
+  async getCurrentAddress(): Promise<string | null> {
+    try {
+      // Check session first
+      const session = await this.getSession();
+      if (!session?.password) {
+        return null;
+      }
+
+      // Get all wallet addresses from localStorage
+      const addresses = Object.keys(localStorage)
+        .filter(key => key.startsWith(this.keyPrefix))
+        .map(key => key.slice(this.keyPrefix.length));
+
+      // Return the first address that can be decrypted with the session password
+      for (const address of addresses) {
+        try {
+          await this.getWalletData(address, session.password);
+          return address;
+        } catch {
+          continue;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to get current address:', error);
+      return null;
+    }
+  }
+
   async getSession(): Promise<SessionData | null> {
     try {
       if (!window.sessionStorage) {

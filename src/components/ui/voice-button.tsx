@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, Send, Bot, Code2, Wallet, RefreshCw } from 'lucide-react';
 import { TuraWorkflow } from '../../agentic_workflow/TuraWorkflow';
-import { VirtualWalletSystem } from '../../lib/virtual-wallet-system';
+import { WalletManagerImpl } from '../../lib/tura-wallet/wallet_manager';
 import { AgenticWorkflow } from '../../agentic_workflow/AgenticWorkflow';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -71,8 +71,8 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [pressProgress, setPressProgress] = useState(0);
   const pressTimer = useRef<number | null>(null);
-  const [walletSystem] = useState(() => new VirtualWalletSystem());
-  const [workflows] = useState(() => createWorkflows(walletSystem));
+  const [walletManager] = useState(() => new WalletManagerImpl());
+  const [workflows] = useState(() => createWorkflows(walletManager));
   const turaWorkflow = useRef<TuraWorkflow | null>(null);
   
   useEffect(() => {
@@ -107,8 +107,8 @@ export default function ChatPage() {
   // Update messages state when balance changes
   const updateBalanceWithMessage = useCallback(async (address: string) => {
     try {
-      const balance = await walletSystem.getBalance(address);
-      setChatBalance(balance.toString());
+      const balance = await walletManager.getBalance(address);
+      setChatBalance(balance);
       return balance;
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -121,7 +121,7 @@ export default function ChatPage() {
       updateMessages([...messages, errorMessage]);
       throw error;
     }
-  }, [walletSystem]);
+  }, [walletManager, messages, updateMessages]);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -141,7 +141,7 @@ export default function ChatPage() {
       });
 
       try {
-        const storedAddress = walletSystem.getCurrentAddress();
+        const storedAddress = await walletManager.getCurrentAddress();
         if (storedAddress) {
           setChatAddress(storedAddress);
           await updateBalanceWithMessage(storedAddress);
@@ -185,7 +185,7 @@ export default function ChatPage() {
     }, 5000);
 
     return () => clearInterval(refreshInterval);
-  }, [walletSystem, walletAgent, lastMessageTime, chatAddress, messages.length, updateBalanceWithMessage, updateMessages]);
+  }, [walletManager, walletAgent, lastMessageTime, chatAddress, messages.length, updateBalanceWithMessage, updateMessages]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -218,10 +218,9 @@ export default function ChatPage() {
           if (!(walletAgent instanceof AgenticWorkflow)) {
             return;
           }
-          walletSystem.setCurrentAddress(chatAddress);
           await walletAgent.processMessage(text);
           
-          const storedAddress = walletSystem.getCurrentAddress();
+          const storedAddress = await walletManager.getCurrentAddress();
           if (storedAddress !== chatAddress) {
             setChatAddress(storedAddress || '');
           }
@@ -242,7 +241,7 @@ export default function ChatPage() {
           if (!agentInstance || !(agentInstance instanceof AgenticWorkflow)) {
             return;
           }
-          walletSystem.setCurrentAddress(chatAddress);
+          // Local wallet handles current address
           await agentInstance.processMessage(text);
           const newMessages = agentInstance.getMessages();
           updateMessages(newMessages);
@@ -480,7 +479,7 @@ export default function ChatPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    walletSystem.logoutAccount();
+                    // Local wallet handles logout
                     setChatAddress('');
                     setChatBalance('0');
                     
@@ -598,7 +597,7 @@ export default function ChatPage() {
                 }}
                 disabled={signatureDetails?.requirePassword && !password}
               >
-                Sign & Deploy
+                Sign &amp; Deploy
               </Button>
             </div>
           </DialogFooter>
