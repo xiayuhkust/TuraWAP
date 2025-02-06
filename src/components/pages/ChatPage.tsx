@@ -358,24 +358,22 @@ export default function ChatPage() {
   };
 
   return (
-    <Card className="h-[calc(100vh-8rem)]">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bot className="h-6 w-6" />
-          {activeAgent ? activeAgent.name : 'Chat'}
-        </CardTitle>
-      </CardHeader>
-      {/* Dedicated WalletDisplay Section */}
-      <div className="border-b px-4 py-2 flex items-center">
-        <div className="w-[30%] flex items-center gap-2">
-          <Bot className="h-4 w-4" />
-        </div>
-        <div className="w-[70%]">
-          <WalletErrorBoundary>
-            <WalletDisplay />
-          </WalletErrorBoundary>
-        </div>
+  <Card className="h-[calc(100vh-8rem)]">
+    <div className="border-b px-4 py-2 flex items-center">
+      <div className="w-[30%] flex flex-col items-center gap-2">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="h-6 w-6" />
+            {activeAgent ? activeAgent.name : 'Chat'}
+          </CardTitle>
+        </CardHeader>
       </div>
+      <div className="w-[70%]">
+        <WalletErrorBoundary>
+          <WalletDisplay />
+        </WalletErrorBoundary>
+      </div>
+    </div>
       {/* Signature Dialog */}
       <Dialog 
         open={showSignatureDialog} 
