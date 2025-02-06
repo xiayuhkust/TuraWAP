@@ -366,7 +366,7 @@ export default function ChatPage() {
         </CardTitle>
       </CardHeader>
       {/* Signature Dialog */}
-      <Dialog 
+      <Dialog
         open={showSignatureDialog} 
         onOpenChange={(open: boolean) => {
           if (!open) {
@@ -447,20 +447,21 @@ export default function ChatPage() {
 
 
 
-      <CardContent className="flex h-full gap-4">
-        {/* AgenticWorkflow Sidebar */}
-        <div className="w-[30%] border-r pr-4">
-          <ScrollArea className="h-full">
-            <div className="space-y-6">
-              {/* Official Agents */}
+      <CardContent className="flex flex-col h-full gap-4">
+        <WalletErrorBoundary>
+          <WalletDisplay />
+        </WalletErrorBoundary>
+        <div className="flex gap-4 flex-1">
+          {/* AgenticWorkflow Sidebar */}
+          <div className="w-[30%] border-r pr-4">
+            <ScrollArea className="h-full">
+              <div className="space-y-6">
+                {/* Official Agents */}
               <div className="space-y-2">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Bot className="h-4 w-4" />
                   Official Agents
                 </h3>
-                <WalletErrorBoundary>
-                  <WalletDisplay />
-                </WalletErrorBoundary>
                 <div className="space-y-2">
                   {officialAgents.map(agent => (
                     <div
