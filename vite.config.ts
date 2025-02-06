@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import type { UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
@@ -14,8 +15,8 @@ export default defineConfig({
       '/rpc': {
         target: 'https://rpc-dev.turablockchain.com',
         changeOrigin: true,
-        secure: false,
-        ws: true,
+        secure: true,
+        ws: false,
         rewrite: (path) => path.replace(/^\/rpc/, '')
       }
     }
@@ -24,4 +25,7 @@ export default defineConfig({
   css: {
     postcss: './postcss.config.js'
   },
-})
+  build: {
+    target: 'esnext'
+  }
+});
