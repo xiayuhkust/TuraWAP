@@ -34,12 +34,10 @@ export class WalletService {
     try {
       this.cleanup();
       
-      // Handle both relative and absolute URLs
-      const baseUrl = CHAIN_CONFIG.rpcUrl.startsWith('/')
-        ? window.location.origin + CHAIN_CONFIG.rpcUrl
-        : CHAIN_CONFIG.rpcUrl;
-      
-      const wsUrl = baseUrl.replace('https://', 'wss://').replace('http://', 'ws://');
+      // Handle WebSocket URL for development and production
+      const wsUrl = CHAIN_CONFIG.rpcUrl.startsWith('/')
+        ? `ws://${window.location.host}${CHAIN_CONFIG.rpcUrl}`
+        : CHAIN_CONFIG.rpcUrl.replace('https://', 'wss://').replace('http://', 'ws://');
       console.log('Connecting to WebSocket URL:', wsUrl);
       
       this.provider = new Web3.providers.WebsocketProvider(wsUrl, {
