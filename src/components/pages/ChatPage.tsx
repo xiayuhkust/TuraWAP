@@ -103,10 +103,9 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    if (!inputText.trim()) return;
-
-    const text = inputText.trim();
+  const handleSendMessage = async (text?: string) => {
+    const messageText = text || inputText.trim();
+    if (!messageText) return;
     setInputText('');
 
     try {
@@ -343,7 +342,7 @@ export default function ChatPage() {
   };
 
   return (
-  <Card className="h-[calc(100vh-8rem)]">
+  <Card className="h-[calc(100vh-8rem)] bg-[#313338]">
     <div className="border-b px-4 py-2 flex items-center">
       <div className="w-[30%] flex flex-col items-center gap-2">
         <CardHeader>
@@ -476,7 +475,7 @@ export default function ChatPage() {
                           <div className="font-medium">
                             {agent.name}
                           </div>
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className={`text-xs ${agent.status === 'OFFICIAL' ? 'bg-[#ffd700] text-black' : agent.status === 'VALID' ? 'bg-[#00ff00] text-black' : ''}`}>
                             {agent.status}
                           </Badge>
                         </div>
@@ -641,9 +640,9 @@ export default function ChatPage() {
                   key={index}
                   variant="outline"
                   size="sm"
+                  className="bg-[#2b2d31] text-white"
                   onClick={async () => {
-                    setInputText(text);
-                    await handleSendMessage();
+                    await handleSendMessage(text);
                   }}
                 >
                   {text}
@@ -685,6 +684,7 @@ export default function ChatPage() {
             <Button
               variant="outline"
               size="icon"
+              className="bg-[#2b2d31]"
               onClick={isRecording ? stopRecording : startRecording}
               disabled={isLoading}
               className={isRecording ? 'text-destructive' : ''}
@@ -694,16 +694,20 @@ export default function ChatPage() {
             <Input
               placeholder="Type your message..."
               value={inputText}
+              className="bg-[#383a40] text-white"
               onChange={(e) => setInputText(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              onKeyPress={async (e) => {
+                if (e.key === 'Enter' && inputText.trim()) {
+                  await handleSendMessage();
+                  setInputText('');
+                }
+              }}
               disabled={isLoading}
             />
-            <Button onClick={handleSendMessage} disabled={isLoading}>
-              <Send className="h-4 w-4" />
-            </Button>
             <Button
               variant="outline"
               size="icon"
+              className="bg-[#2b2d31]"
               onClick={() => {
                 if (walletAgent) {
                   walletAgent.clearMessages();
