@@ -1,7 +1,7 @@
 export const CHAIN_CONFIG = {
   chainId: 1337,
   chainName: 'Tura',
-  rpcUrl: 'https://43.135.26.222:8000',
+  rpcUrl: 'https://rpc-dev.turablockchain.com',
   nativeCurrency: {
     name: 'TURA',
     symbol: 'TURA',
