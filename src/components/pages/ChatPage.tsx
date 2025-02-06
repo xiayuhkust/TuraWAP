@@ -369,7 +369,6 @@ export default function ChatPage() {
       <div className="border-b px-4 py-2 flex items-center">
         <div className="w-[30%] flex items-center gap-2">
           <Bot className="h-4 w-4" />
-          <span className="font-medium">WorkFlow & Agent</span>
         </div>
         <div className="w-[70%]">
           <WalletErrorBoundary>
