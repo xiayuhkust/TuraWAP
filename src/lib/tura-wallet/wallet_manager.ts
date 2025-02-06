@@ -53,9 +53,45 @@ export class WalletManagerImpl {
   public walletService: WalletService;
   private readonly keyPrefix = 'wallet_';
   private readonly sessionKey = 'wallet_session';
+  private isConnected: boolean = false;
+  private connectionCheckInterval: number | null = null;
+
+  private setupConnectionCheck() {
+    if (this.connectionCheckInterval) {
+      window.clearInterval(this.connectionCheckInterval);
+    }
+    
+    this.connectionCheckInterval = window.setInterval(async () => {
+      try {
+        await this.walletService.web3.eth.net.isListening();
+        if (!this.isConnected) {
+          this.isConnected = true;
+          window.dispatchEvent(new CustomEvent('wallet-connection-changed', {
+            detail: { connected: true }
+          }));
+        }
+      } catch (error) {
+        if (this.isConnected) {
+          this.isConnected = false;
+          window.dispatchEvent(new CustomEvent('wallet-connection-changed', {
+            detail: { connected: false }
+          }));
+        }
+      }
+    }, 5000);
+  }
 
   constructor() {
     this.walletService = new WalletService();
+    this.setupConnectionCheck();
+  }
+
+  public cleanup() {
+    if (this.connectionCheckInterval) {
+      window.clearInterval(this.connectionCheckInterval);
+      this.connectionCheckInterval = null;
+    }
+    this.walletService.cleanup();
   }
 
   private async _deriveKey(password: string): Promise<string> {
@@ -356,9 +392,14 @@ export class WalletManagerImpl {
   public logout(): void {
     sessionStorage.removeItem(this.sessionKey);
     localStorage.removeItem('last_activity');
+    this.cleanup();
     window.dispatchEvent(new CustomEvent('wallet-updated', { 
       detail: { address: '', balance: '0' }
     }));
+  }
+
+  public isWalletConnected(): boolean {
+    return this.isConnected;
   }
 
   async getSession(): Promise<SessionData | null> {
