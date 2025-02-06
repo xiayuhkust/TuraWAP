@@ -1,5 +1,6 @@
 import Web3 from 'web3';
 import { Web3ProviderService } from './web3-provider';
+import { WalletState } from './wallet_state';
 
 export class WalletService {
   private web3: Web3 | null = null;
@@ -13,6 +14,7 @@ export class WalletService {
     if (this.web3) return this.web3;
     const web3 = await this.providerService.connect();
     this.web3 = web3;
+    await WalletState.getInstance().updateState({ isConnected: true });
     return web3;
   }
 

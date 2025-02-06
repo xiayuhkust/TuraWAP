@@ -20,8 +20,32 @@ export class Web3ProviderService {
       this.state = 'connecting';
       
       if (window.ethereum) {
-        this.provider = window.ethereum;
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (retryCount < maxRetries) {
+          try {
+            this.provider = window.ethereum;
+            await Promise.race([
+              window.ethereum.request({ method: 'eth_requestAccounts' }),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Extension connection timeout')), 3000)
+              )
+            ]);
+            break;
+          } catch (err) {
+            retryCount++;
+            if (retryCount === maxRetries) {
+              console.warn('Extension connection failed, falling back to HTTP provider');
+              const endpoint = CHAIN_CONFIG.rpcUrl;
+              if (!endpoint.startsWith('https://') && !endpoint.startsWith('/')) {
+                throw new Error('Production endpoints must use HTTPS');
+              }
+              this.provider = new Web3.providers.HttpProvider(endpoint);
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
       } else {
         const endpoint = CHAIN_CONFIG.rpcUrl;
         if (!endpoint.startsWith('https://') && !endpoint.startsWith('/')) {
