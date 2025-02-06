@@ -365,6 +365,12 @@ export default function ChatPage() {
           {activeAgent ? activeAgent.name : 'Chat'}
         </CardTitle>
       </CardHeader>
+      {/* Dedicated WalletDisplay Section */}
+      <div className="border-b px-4 py-2">
+        <WalletErrorBoundary>
+          <WalletDisplay />
+        </WalletErrorBoundary>
+      </div>
       {/* Signature Dialog */}
       <Dialog 
         open={showSignatureDialog} 
