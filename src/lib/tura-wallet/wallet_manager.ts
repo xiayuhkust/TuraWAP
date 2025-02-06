@@ -51,7 +51,8 @@ export interface EncryptedData {
 }
 
 export class WalletManagerImpl {
-  public walletService: WalletService;
+  private walletService: WalletService;
+  private currentAddress: string | null = null;
   private readonly keyPrefix = 'wallet_';
   private readonly sessionKey = 'wallet_session';
   private _isConnected: boolean = false;
@@ -101,6 +102,18 @@ export class WalletManagerImpl {
   constructor() {
     this.walletService = new WalletService();
     this.setupConnectionCheck();
+  }
+
+  public async connect(): Promise<void> {
+    try {
+      const connected = await this.walletService.isConnected();
+      if (!connected) {
+        await this.walletService.ensureConnection();
+      }
+    } catch (error) {
+      console.error('Failed to connect wallet:', error);
+      throw error;
+    }
   }
 
   public cleanup() {
@@ -180,32 +193,27 @@ export class WalletManagerImpl {
     }
 
     try {
-      const account = await this.walletService.createAccount();
-      
       // Generate mnemonic using bip39 with proper entropy
       const entropy = new Uint8Array(16);
       crypto.getRandomValues(entropy);
       const mnemonic = bip39.entropyToMnemonic(
         Buffer.from(entropy).toString('hex')
       );
-      
-      console.log('Mnemonic generation successful:', {
-        hasEntropy: !!entropy,
-        entropyLength: entropy.length,
-        hasMnemonic: !!mnemonic,
-        mnemonicWordCount: mnemonic.split(' ').length
-      });
+
+      // Create wallet using new WalletService
+      const response = await this.walletService.createWallet(password);
+      this.currentAddress = response.address;
       
       const walletData: WalletData = {
-        address: account.address,
-        privateKey: account.privateKey,
+        address: response.address,
+        privateKey: '', // Private key is handled by WalletService
         mnemonic: mnemonic,
         createdAt: new Date().toISOString()
       };
 
       const encrypted = await this._encrypt(walletData, password);
       localStorage.setItem(
-        `${this.keyPrefix}${account.address.toLowerCase()}`,
+        `${this.keyPrefix}${response.address.toLowerCase()}`,
         encrypted
       );
 
@@ -218,13 +226,13 @@ export class WalletManagerImpl {
 
       // Update wallet state
       await WalletState.getInstance().updateState({
-        address: account.address,
-        balance: await this.getBalance(account.address),
+        address: response.address,
+        balance: await this.getBalance(response.address),
         isConnected: await this.isConnected()
       });
 
       return {
-        address: account.address,
+        address: response.address,
         mnemonic: mnemonic,
         createdAt: walletData.createdAt
       };
@@ -243,25 +251,24 @@ export class WalletManagerImpl {
       }
 
       // Generate private key from mnemonic
-      const seed = await bip39.mnemonicToSeed(mnemonic);
-      const privateKey = '0x' + Buffer.from(seed).slice(0, 32).toString('hex');
-      const account = await this.walletService.createAccount(privateKey);
+      const response = await this.walletService.createWallet(password);
+      this.currentAddress = response.address;
 
       const walletData: WalletData = {
-        address: account.address,
-        privateKey: account.privateKey,
+        address: response.address,
+        privateKey: '', // Private key is handled by WalletService
         mnemonic: mnemonic,
         createdAt: new Date().toISOString()
       };
 
       const encrypted = await this._encrypt(walletData, password);
       localStorage.setItem(
-        `${this.keyPrefix}${account.address.toLowerCase()}`,
+        `${this.keyPrefix}${response.address.toLowerCase()}`,
         encrypted
       );
 
       return {
-        address: account.address,
+        address: response.address,
         createdAt: walletData.createdAt
       };
     } catch (error) {
@@ -408,6 +415,7 @@ export class WalletManagerImpl {
   public logout(): void {
     sessionStorage.removeItem(this.sessionKey);
     localStorage.removeItem('last_activity');
+    this.currentAddress = null;
     this.cleanup();
     WalletState.getInstance().updateState({
       address: '',
