@@ -12,7 +12,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/rpc': {
-        target: 'https://43.135.26.222:8088',
+        target: 'https://rpc-dev.turablockchain.com',
         changeOrigin: true,
         secure: false,
         ws: true,
