@@ -136,6 +136,9 @@ export class WalletManagerImpl {
   }
 
   private async _deriveKey(password: string): Promise<string> {
+    if (!window.crypto?.subtle?.digest) {
+      throw new Error('Crypto API not available in this browser');
+    }
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
     const hash = await crypto.subtle.digest('SHA-256', data);
@@ -201,6 +204,10 @@ export class WalletManagerImpl {
   async createWallet(password: string): Promise<WalletResponse> {
     if (!password || password.length < 8) {
       throw new Error('Password must be at least 8 characters long');
+    }
+    
+    if (!window.crypto?.subtle || !window.crypto?.getRandomValues) {
+      throw new Error('Your browser does not support the required security features');
     }
 
     try {
