@@ -1,6 +1,7 @@
 import { AgenticWorkflow, Intent } from './AgenticWorkflow';
 import { OpenAI } from 'openai';
 import { WalletManagerImpl } from '../lib/tura-wallet/wallet_manager';
+import { WalletState } from '../lib/tura-wallet/wallet_state';
 
 /// <reference types="vite/client" />
 
