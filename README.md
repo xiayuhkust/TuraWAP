@@ -25,6 +25,15 @@ export default tseslint.config({
 })
 ```
 
+## Browser Compatibility
+
+This application requires modern browser features for security:
+- `crypto.subtle` for secure key derivation
+- `crypto.getRandomValues` for secure random number generation
+
+Some browser extensions may interfere with these features. If you encounter errors:
+1. Try disabling browser extensions
+2. Use a modern browser (Chrome 49+, Firefox 52+, Safari 11+)
 - Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
 - Optionally add `...tseslint.configs.stylisticTypeChecked`
 - Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
