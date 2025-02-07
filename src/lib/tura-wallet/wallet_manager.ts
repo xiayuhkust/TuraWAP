@@ -1,7 +1,9 @@
 import { WalletService } from './wallet';
-import * as bip39 from 'bip39';
 import { Buffer } from 'buffer';
 import { WalletState } from './wallet_state';
+
+// @ts-ignore
+import * as bip39 from 'bip39';
 
 // Ensure Buffer is available globally
 if (typeof window !== 'undefined') {
@@ -52,7 +54,7 @@ export interface EncryptedData {
 
 export class WalletManagerImpl {
   private walletService: WalletService;
-  private currentAddress: string | null = null;
+  // Removed unused currentAddress field
   private readonly keyPrefix = 'wallet_';
   private readonly sessionKey = 'wallet_session';
   private _isConnected: boolean = false;
@@ -211,7 +213,6 @@ export class WalletManagerImpl {
 
       // Create wallet using new WalletService
       const response = await this.walletService.createWallet(password);
-      this.currentAddress = response.address;
       
       const walletData: WalletData = {
         address: response.address,
@@ -261,7 +262,6 @@ export class WalletManagerImpl {
 
       // Generate private key from mnemonic
       const response = await this.walletService.createWallet(password);
-      this.currentAddress = response.address;
 
       const walletData: WalletData = {
         address: response.address,
@@ -424,7 +424,6 @@ export class WalletManagerImpl {
   public logout(): void {
     sessionStorage.removeItem(this.sessionKey);
     localStorage.removeItem('last_activity');
-    this.currentAddress = null;
     this.cleanup();
     WalletState.getInstance().updateState({
       address: '',
