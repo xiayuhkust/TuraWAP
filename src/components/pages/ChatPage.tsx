@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, Send, Bot, Code2, Wallet } from 'lucide-react';
+import { Mic, Bot, Code2 } from 'lucide-react';
 import { TuraWorkflow } from '../../agentic_workflow/TuraWorkflow';
 import { WalletManagerImpl } from '../../lib/tura-wallet/wallet_manager';
 import { AgenticWorkflow } from '../../agentic_workflow/AgenticWorkflow';
@@ -635,7 +635,7 @@ export default function ChatPage() {
           {/* Example Text Buttons */}
           <div className="h-[15%] border-b p-4 flex flex-wrap gap-2">
             {activeAgent?.instance instanceof AgenticWorkflow && 
-              (activeAgent.instance as AgenticWorkflow).exampleTxt.map((text, index) => (
+              (activeAgent.instance as AgenticWorkflow & { exampleTxt: string[] }).exampleTxt.map((text: string, index: number) => (
                 <Button
                   key={index}
                   variant="outline"

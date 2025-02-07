@@ -4,7 +4,9 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 const serverConfig: ServerOptions = {
-  https: process.env.NODE_ENV === 'production' ? {} : false,
+  https: undefined,
+  host: true,
+  allowedHosts: ['wallet-session-app-tunnel-musu5lwr.devinapps.com'],
   proxy: {
     '/rpc': {
       target: 'https://rpc-dev.turablockchain.com',

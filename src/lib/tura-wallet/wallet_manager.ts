@@ -1,16 +1,18 @@
 import { WalletService } from './wallet';
-import * as bip39 from 'bip39';
 import { Buffer } from 'buffer';
 import { WalletState } from './wallet_state';
 
+// @ts-expect-error bip39 module has no type declarations
+import * as bip39 from 'bip39';
+
 // Ensure Buffer is available globally
 if (typeof window !== 'undefined') {
-  (window as any).Buffer = Buffer;
+  (window as Window & { Buffer: typeof Buffer }).Buffer = Buffer;
 }
 
 declare global {
   interface Window {
-    ethereum: any;
+    ethereum: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
   }
 }
 
@@ -52,7 +54,7 @@ export interface EncryptedData {
 
 export class WalletManagerImpl {
   private walletService: WalletService;
-  private currentAddress: string | null = null;
+  // Removed unused currentAddress field
   private readonly keyPrefix = 'wallet_';
   private readonly sessionKey = 'wallet_session';
   private _isConnected: boolean = false;
@@ -73,7 +75,7 @@ export class WalletManagerImpl {
           this._isConnected = false;
           await WalletState.getInstance().updateState({ isConnected: false });
         }
-      } catch (error) {
+      } catch {
         if (this._isConnected) {
           this._isConnected = false;
           await WalletState.getInstance().updateState({ isConnected: false });
@@ -90,7 +92,7 @@ export class WalletManagerImpl {
         await WalletState.getInstance().updateState({ isConnected: connected });
       }
       return connected;
-    } catch (error) {
+    } catch {
       if (this._isConnected) {
         this._isConnected = false;
         await WalletState.getInstance().updateState({ isConnected: false });
@@ -177,7 +179,7 @@ export class WalletManagerImpl {
       
       try {
         decoded = JSON.parse(atob(encryptedData));
-      } catch (e) {
+      } catch {
         throw new Error('Invalid encrypted data format');
       }
       
@@ -211,7 +213,6 @@ export class WalletManagerImpl {
 
       // Create wallet using new WalletService
       const response = await this.walletService.createWallet(password);
-      this.currentAddress = response.address;
       
       const walletData: WalletData = {
         address: response.address,
@@ -261,7 +262,6 @@ export class WalletManagerImpl {
 
       // Generate private key from mnemonic
       const response = await this.walletService.createWallet(password);
-      this.currentAddress = response.address;
 
       const walletData: WalletData = {
         address: response.address,
@@ -424,7 +424,6 @@ export class WalletManagerImpl {
   public logout(): void {
     sessionStorage.removeItem(this.sessionKey);
     localStorage.removeItem('last_activity');
-    this.currentAddress = null;
     this.cleanup();
     WalletState.getInstance().updateState({
       address: '',
