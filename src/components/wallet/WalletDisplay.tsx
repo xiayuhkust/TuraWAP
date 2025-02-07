@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { WalletState, WalletInfo } from '../../lib/tura-wallet/wallet_state';
 import { Button } from '../ui/button';
 import { WalletDebugInfo } from './WalletDebugInfo';
