@@ -137,7 +137,7 @@ export class WalletManagerImpl {
 
   private async _deriveKey(password: string): Promise<string> {
     if (!window.crypto?.subtle?.digest) {
-      throw new Error('Crypto API not available in this browser');
+      throw new Error('Your browser does not support secure hashing (crypto.subtle.digest)');
     }
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
@@ -207,7 +207,11 @@ export class WalletManagerImpl {
     }
     
     if (!window.crypto?.subtle || !window.crypto?.getRandomValues) {
-      throw new Error('Your browser does not support the required security features');
+      throw new Error(
+        'Your browser does not support required security features: ' +
+        (!window.crypto?.subtle ? 'crypto.subtle, ' : '') +
+        (!window.crypto?.getRandomValues ? 'crypto.getRandomValues' : '')
+      );
     }
 
     try {
