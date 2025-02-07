@@ -6,7 +6,7 @@ import path from 'path'
 const serverConfig: ServerOptions = {
   https: undefined,
   host: true,
-  allowedHosts: ['wallet-session-app-tunnel-musu5lwr.devinapps.com'],
+  cors: true,
   proxy: {
     '/rpc': {
       target: 'https://rpc-dev.turablockchain.com',
