@@ -20,6 +20,27 @@ export class WalletState {
       balance: '0',
       isConnected: false
     };
+    
+    // Initialize from localStorage if wallet exists
+    this.initializeFromStorage().catch(error => {
+      console.error('Failed to initialize from storage:', error);
+    });
+  }
+
+  private async initializeFromStorage(): Promise<void> {
+    const wallets = this.walletManager.listStoredWallets();
+    if (wallets.length > 0) {
+      const session = await this.walletManager.getSession();
+      if (session?.password) {
+        const address = wallets[0];
+        const balance = await this.walletManager.getBalance(address);
+        await this.updateState({
+          address,
+          balance,
+          isConnected: await this.walletManager.isConnected()
+        });
+      }
+    }
   }
   
   public static getInstance(): WalletState {

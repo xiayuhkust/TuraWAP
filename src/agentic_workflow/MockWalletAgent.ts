@@ -1,6 +1,7 @@
 import { AgenticWorkflow, Intent } from './AgenticWorkflow';
 import { OpenAI } from 'openai';
 import { WalletManagerImpl } from '../lib/tura-wallet/wallet_manager';
+import { WalletState } from '../lib/tura-wallet/wallet_state';
 
 /// <reference types="vite/client" />
 
@@ -90,6 +91,14 @@ export class MockWalletAgent extends AgenticWorkflow {
     try {
       const response = await this.walletManager.createWallet(password);
       const balance = await this.walletManager.getBalance(response.address);
+      
+      // Update WalletState
+      await WalletState.getInstance().updateState({
+        address: response.address,
+        balance,
+        isConnected: true
+      });
+      
       return `🎉 Wallet created successfully!\nYour wallet address: ${response.address}\n\n` +
              `🔐 Your wallet is secured with your password. Don't forget it!\n\n` +
              `Your initial balance is ${balance} TURA.`;
