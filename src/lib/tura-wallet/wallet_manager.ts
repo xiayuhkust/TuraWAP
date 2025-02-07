@@ -2,7 +2,7 @@ import { WalletService } from './wallet';
 import { Buffer } from 'buffer';
 import { WalletState } from './wallet_state';
 
-// @ts-expect-error bip39 provides its own types
+// @ts-expect-error bip39 module has no type declarations
 import * as bip39 from 'bip39';
 
 // Ensure Buffer is available globally
