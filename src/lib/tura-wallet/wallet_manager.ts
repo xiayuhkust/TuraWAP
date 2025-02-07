@@ -2,17 +2,17 @@ import { WalletService } from './wallet';
 import { Buffer } from 'buffer';
 import { WalletState } from './wallet_state';
 
-// @ts-ignore
+// @ts-expect-error bip39 provides its own types
 import * as bip39 from 'bip39';
 
 // Ensure Buffer is available globally
 if (typeof window !== 'undefined') {
-  (window as any).Buffer = Buffer;
+  (window as Window & { Buffer: typeof Buffer }).Buffer = Buffer;
 }
 
 declare global {
   interface Window {
-    ethereum: any;
+    ethereum: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
   }
 }
 
@@ -75,7 +75,7 @@ export class WalletManagerImpl {
           this._isConnected = false;
           await WalletState.getInstance().updateState({ isConnected: false });
         }
-      } catch (error) {
+      } catch {
         if (this._isConnected) {
           this._isConnected = false;
           await WalletState.getInstance().updateState({ isConnected: false });
@@ -92,7 +92,7 @@ export class WalletManagerImpl {
         await WalletState.getInstance().updateState({ isConnected: connected });
       }
       return connected;
-    } catch (error) {
+    } catch {
       if (this._isConnected) {
         this._isConnected = false;
         await WalletState.getInstance().updateState({ isConnected: false });
@@ -179,7 +179,7 @@ export class WalletManagerImpl {
       
       try {
         decoded = JSON.parse(atob(encryptedData));
-      } catch (e) {
+      } catch {
         throw new Error('Invalid encrypted data format');
       }
       

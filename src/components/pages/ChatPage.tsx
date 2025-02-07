@@ -635,7 +635,7 @@ export default function ChatPage() {
           {/* Example Text Buttons */}
           <div className="h-[15%] border-b p-4 flex flex-wrap gap-2">
             {activeAgent?.instance instanceof AgenticWorkflow && 
-              (activeAgent.instance as any).exampleTxt.map((text: string, index: number) => (
+              (activeAgent.instance as AgenticWorkflow & { exampleTxt: string[] }).exampleTxt.map((text: string, index: number) => (
                 <Button
                   key={index}
                   variant="outline"
