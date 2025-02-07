@@ -432,6 +432,12 @@ export class WalletManagerImpl {
     }
   }
 
+  public listStoredWallets(): string[] {
+    return Object.keys(localStorage)
+      .filter(key => key.startsWith(this.keyPrefix))
+      .map(key => key.slice(this.keyPrefix.length));
+  }
+
   public logout(): void {
     sessionStorage.removeItem(this.sessionKey);
     localStorage.removeItem('last_activity');
