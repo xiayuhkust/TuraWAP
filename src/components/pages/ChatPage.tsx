@@ -557,7 +557,7 @@ export default function ChatPage() {
                     >
                       <div className="flex items-center justify-between mb-1">
                         <div className="font-medium">{workflow.name}</div>
-                        <Badge variant="secondary" className={`text-xs ${workflow.status === 'VALID' ? 'bg-[#383a40]' : ''}`}>
+                        <Badge variant="secondary" className={`text-xs ${workflow.status === 'VALID' ? 'bg-[#54b265]' : ''}`}>
                           {workflow.status}
                         </Badge>
                       </div>
