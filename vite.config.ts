@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 const serverConfig: ServerOptions = {
-  https: false,
+  https: undefined,
   host: 'localhost',
   port: 5173,
   cors: true,
