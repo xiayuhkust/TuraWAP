@@ -5,7 +5,8 @@ import path from 'path'
 
 const serverConfig: ServerOptions = {
   https: undefined,
-  host: true,
+  host: 'localhost',
+  port: 5173,
   cors: true,
   proxy: {
     '/rpc': {
