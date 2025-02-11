@@ -1,6 +1,5 @@
 import { AgenticWorkflow, Intent } from './AgenticWorkflow';
 import { OpenAI } from 'openai';
-import { useTranslation } from 'react-i18next';
 import { WalletManagerImpl } from '../lib/tura-wallet/wallet_manager';
 import { WalletState } from '../lib/tura-wallet/wallet_state';
 
@@ -18,18 +17,11 @@ const openai = new OpenAI({
 });
 
 export class MockWalletAgent extends AgenticWorkflow {
-  private getT() {
-    const { t } = useTranslation();
-    return t;
-  }
-
-  protected get exampleTxt(): string[] {
-    return [
-      this.getT()('agent.examples.createWallet'),
-      this.getT()('agent.examples.checkBalance'),
-      this.getT()('agent.examples.sendTokens')
-    ];
-  }
+  protected exampleTxt = [
+    "🔑 Create a new wallet",
+    "💰 Check your balance", 
+    "💸 Send TURA tokens to another address"
+  ];
 
   private state: { 
     type: 'idle' | 'awaiting_wallet_password' | 'awaiting_login_password';
@@ -50,7 +42,6 @@ export class MockWalletAgent extends AgenticWorkflow {
   }
 
   private async handleLogin(address?: string): Promise<string> {
-    const t = this.getT();
     if (!address) {
       return ""; // Don't process if no address is provided
     }
@@ -58,21 +49,21 @@ export class MockWalletAgent extends AgenticWorkflow {
     try {
       // Validate address format
       if (!address.startsWith('0x') || address.length !== 42) {
-        return t('agent.invalidAddress');
+        return "Invalid wallet address format. Please provide a valid Ethereum address.";
       }
 
       this.state = { type: 'awaiting_login_password', address };
-      return t('agent.loginPrompt');
+      return "Please enter your wallet password:";
     } catch (error) {
       console.error('Login error:', error);
-      return t('agent.loginFailed');
+      return "Failed to process login request. Please try again.";
     }
   }
 
   private async handleBalanceCheck(): Promise<string> {
     const address = await this.walletManager.getCurrentAddress();
     if (!address) {
-      return this.getT()('agent.needWalletFirst');
+      return "You need to create or import a wallet first. Type 'create wallet' to get started.";
     }
 
     try {
@@ -86,22 +77,22 @@ export class MockWalletAgent extends AgenticWorkflow {
         }
       }));
 
-      return this.getT()('agent.balanceTemplate', { address: shortAddress, amount: balance });
+      return `💰 Your wallet (${shortAddress}) contains ${balance} TURA`;
     } catch (error) {
       console.error('Failed to get balance:', error);
-      return `❌ ${error instanceof Error ? error.message : this.getT()('agent.balanceFailed')}`;
+      return `❌ ${error instanceof Error ? error.message : 'Failed to get balance. Please try again.'}`;
     }
   }
 
   private async handleCreateWallet(input?: string): Promise<string> {
     if (this.state.type === 'idle') {
       this.state = { type: 'awaiting_wallet_password' };
-      return this.getT()('agent.createWalletPrompt');
+      return 'Please enter a password for your new wallet (minimum 8 characters):';
     }
     
     if (this.state.type === 'awaiting_wallet_password') {
       if (!input || input.length < 8) {
-        return this.getT()('agent.passwordTooShort');
+        return 'Password must be at least 8 characters long.';
       }
       
       try {
@@ -117,14 +108,15 @@ export class MockWalletAgent extends AgenticWorkflow {
         // Clear state
         this.state = { type: 'idle' };
         
-        return `${this.getT()('agent.walletCreatedSuccess')}\n\n` +
-               `${this.getT()('agent.mnemonicPhrase')}\n${response.mnemonic}\n\n` +
-               `${this.getT()('agent.walletAddress', { address: response.address })}\n\n` +
-               `${this.getT()('agent.initialBalance', { balance })}`;
+        return `🎉 Wallet created successfully!\n\n` +
+               `🔐 IMPORTANT: Save these details securely. They will only be shown once!\n\n` +
+               `📝 Mnemonic Phrase:\n${response.mnemonic}\n\n` +
+               `Your wallet address: ${response.address}\n\n` +
+               `Your initial balance is ${balance} TURA.`;
       } catch (error) {
         this.state = { type: 'idle' }; // Reset on error
         console.error('Error creating wallet:', error);
-        return `❌ ${error instanceof Error ? error.message : this.getT()('agent.createWalletFailed')}`;
+        return `❌ ${error instanceof Error ? error.message : 'Failed to create wallet. Please try again.'}`;
       }
     }
     
@@ -184,13 +176,13 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
       const address = this.state.address;
       this.state = { type: 'idle' };
       if (!address) {
-        return this.getT()('agent.somethingWrong');
+        return "Something went wrong. Please try again.";
       }
       try {
         await this.walletManager.login(address, text);
-        return this.getT()('agent.loginSuccess');
+        return "✅ Successfully logged in! You can now check your balance or send tokens.";
       } catch (error) {
-        return this.getT()('agent.loginFailed');
+        return "❌ Login failed. Please check your password and try again.";
       }
     }
     
@@ -210,18 +202,18 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
           const amountMatch = text.match(/\d+(\.\d+)?/);
           
           if (!toAddressMatch || !amountMatch) {
-            return this.getT()('agent.invalidAmountAddress');
+            return "Please provide a valid wallet address and amount to send. For example: 'send 10 TURA to 0x...'";
           }
 
           const fromAddress = await this.walletManager.getCurrentAddress();
           if (!fromAddress) {
-            return this.getT()('agent.needWalletFirst');
+            return "You need to create or import a wallet first. Type 'create wallet' to get started.";
           }
 
           try {
             const session = await this.walletManager.getSession();
             if (!session?.password) {
-              return this.getT()('agent.needLogin');
+              return "Please log in to your wallet first.";
             }
 
             const receipt = await this.walletManager.sendTransaction(
@@ -232,13 +224,13 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
             );
 
             if (!receipt.status) {
-              return this.getT()('agent.transactionFailed');
+              return "❌ Transaction failed. Please try again.";
             }
 
-            return this.getT()('agent.transactionSuccess', { amount: amountMatch[0] });
+            return `✅ Successfully sent ${amountMatch[0]} TURA!`;
           } catch (error) {
             console.error('Transaction error:', error);
-            return `❌ ${error instanceof Error ? error.message : this.getT()('agent.transactionFailed')}`; 
+            return `❌ ${error instanceof Error ? error.message : 'Transaction failed. Please try again.'}`; 
           }
         case 'login':
           const addressMatch = text.match(/0x[a-fA-F0-9]{40}/);
