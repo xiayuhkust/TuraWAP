@@ -1,13 +1,12 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { WalletState, WalletInfo } from '../../lib/tura-wallet/wallet_state';
 import { Button } from '../ui/button';
+import { WalletDebugInfo } from './WalletDebugInfo';
 import { ReconnectDialog } from './ReconnectDialog';
 import { WalletManagerImpl } from '../../lib/tura-wallet/wallet_manager';
 
 export const WalletDisplay: React.FC = () => {
-  const { t } = useTranslation();
   const [showReconnect, setShowReconnect] = useState(false);
   const [walletInfo, setWalletInfo] = useState<WalletInfo>({
     address: '',
@@ -24,10 +23,7 @@ export const WalletDisplay: React.FC = () => {
       }
     });
     setWalletInfo(walletState.getState());
-    return () => {
-      unsubscribe();
-      return true;
-    };
+    return () => unsubscribe();
   }, []);
   
   const handleRefresh = async () => {
@@ -67,7 +63,7 @@ export const WalletDisplay: React.FC = () => {
               onClick={() => navigator.clipboard.writeText(walletInfo.address)}
               disabled={!walletInfo.isConnected}
             >
-              {t('copy')}
+              Copy
             </Button>
           </div>
           <div className="flex items-center gap-2">
@@ -79,7 +75,7 @@ export const WalletDisplay: React.FC = () => {
               onClick={handleRefresh}
               disabled={!walletInfo.isConnected}
             >
-              {t('refresh')}
+              Refresh
             </Button>
           </div>
         </div>
@@ -94,7 +90,7 @@ export const WalletDisplay: React.FC = () => {
               WalletState.getInstance().updateState({ isConnected: false });
             }}
           >
-            {t('leaveSession')}
+            Leave Session
           </Button>
           <Button
             variant="destructive"
@@ -111,10 +107,11 @@ export const WalletDisplay: React.FC = () => {
               });
             }}
           >
-            {t('clearAccount')}
+            Clear Account
           </Button>
         </div>
       </div>
+      <WalletDebugInfo />
       <ReconnectDialog
         open={showReconnect}
         onClose={() => setShowReconnect(false)}
@@ -124,3 +121,5 @@ export const WalletDisplay: React.FC = () => {
     </>
   );
 };
+
+export { WalletDebugInfo };
