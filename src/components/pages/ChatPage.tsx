@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Mic, Bot, Code2 } from 'lucide-react';
 import { TuraWorkflow } from '../../agentic_workflow/TuraWorkflow';
+import { LanguageSelector } from '../ui/LanguageSelector';
 import { WalletManagerImpl } from '../../lib/tura-wallet/wallet_manager';
 import { AgenticWorkflow } from '../../agentic_workflow/AgenticWorkflow';
 import { Button } from '../ui/button';
@@ -36,6 +38,7 @@ interface SignatureDetails {
 }
 
 export default function ChatPage() {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const updateMessages = useCallback((newMessages: Message[]): void => {
     setMessages((prevMessages: ChatMessage[]) => {
@@ -153,9 +156,9 @@ export default function ChatPage() {
         }
     } catch (error: unknown) {
       console.error('Agent processing error:', error);
-      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      const message = error instanceof Error ? error.message : t('unknownError');
       const errorMessage: Message = {
-        text: `Error: ${message}`,
+        text: `${t('error')}: ${message}`,
         sender: 'agent',
         timestamp: new Date().toISOString()
       };
@@ -331,7 +334,7 @@ export default function ChatPage() {
     } catch (error) {
       console.error('Speech-to-text error:', error);
       const errorMessage: Message = {
-        text: 'Failed to convert speech to text. Please try again.',
+        text: t('speechToTextFailed'),
         sender: 'agent',
         timestamp: new Date().toISOString()
       };
@@ -344,11 +347,12 @@ export default function ChatPage() {
   return (
   <Card className="h-[calc(100vh-8rem)] bg-[#313338]">
     <div className="border-b px-4 py-2 flex items-center">
-      <div className="w-[30%] flex flex-col items-center gap-2">
+      <div className="w-[30%] flex items-center gap-2">
+        <LanguageSelector />
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-6 w-6" />
-            {activeAgent ? activeAgent.name : 'Chat'}
+            {activeAgent ? activeAgent.name : t('chat')}
           </CardTitle>
         </CardHeader>
       </div>
@@ -370,9 +374,9 @@ export default function ChatPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{signatureDetails?.title || 'Confirm Transaction'}</DialogTitle>
+            <DialogTitle>{signatureDetails?.title || t('confirmTransaction')}</DialogTitle>
             <DialogDescription className="whitespace-pre-wrap">
-              {signatureDetails?.description || 'Please confirm this transaction in your wallet.'}
+              {signatureDetails?.description || t('confirmTransactionDesc')}
             </DialogDescription>
           </DialogHeader>
           {signatureDetails?.requirePassword && (
@@ -398,7 +402,7 @@ export default function ChatPage() {
                   setShowSignatureDialog(false);
                 }}
               >
-                Cancel
+                {t('cancel')}
               </Button>
               <Button
                 onClick={async () => {
@@ -406,7 +410,7 @@ export default function ChatPage() {
                     try {
                       if (signatureDetails.requirePassword && !password) {
                         const errorMessage: Message = {
-                          text: 'Error: Password is required',
+                          text: t('errorPasswordRequired'),
                           sender: 'agent',
                           timestamp: new Date().toISOString()
                         };
@@ -431,7 +435,7 @@ export default function ChatPage() {
                 }}
                 disabled={signatureDetails?.requirePassword && !password}
               >
-                Sign &amp; Deploy
+                {t('signAndDeploy')}
               </Button>
             </div>
           </DialogFooter>
@@ -446,7 +450,7 @@ export default function ChatPage() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold flex items-center gap-2">
               <Bot className="h-4 w-4" />
-              Official Agents
+              {t('officialAgents')}
             </h3>
 
           </div>
@@ -481,7 +485,7 @@ export default function ChatPage() {
                         </div>
                         <div className="text-sm text-muted-foreground">{agent.description}</div>
                         <div className="text-xs text-muted-foreground mt-2">
-                          Fee: {agent.feePerRequest}
+                          {t('fee')}: {agent.feePerRequest}
                         </div>
                       </div>
                     </div>
@@ -493,7 +497,7 @@ export default function ChatPage() {
               <div className="space-y-2">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Bot className="h-4 w-4" />
-                  Community Agents
+                  {t('communityAgents')}
                 </h3>
                 <div className="space-y-2">
                   {agents.map(agent => (
@@ -521,10 +525,10 @@ export default function ChatPage() {
                       </div>
                       <div className="text-sm text-muted-foreground">{agent.description}</div>
                       <div className="text-xs font-mono mt-2">
-                        Contract: {agent.contractAddress.slice(0, 6)}...{agent.contractAddress.slice(-4)}
+                        {t('contract')}: {agent.contractAddress.slice(0, 6)}...{agent.contractAddress.slice(-4)}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        Fee: {agent.feePerRequest}
+                        {t('fee')}: {agent.feePerRequest}
                       </div>
                     </div>
                   ))}
@@ -535,7 +539,7 @@ export default function ChatPage() {
               <div className="space-y-2">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Code2 className="h-4 w-4" />
-                  Workflows
+                  {t('workflows')}
                 </h3>
                 <div className="space-y-2">
                   {workflows.map((workflow: Workflow) => (
