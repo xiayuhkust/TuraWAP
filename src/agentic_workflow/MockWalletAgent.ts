@@ -2,6 +2,11 @@ import { AgenticWorkflow, Intent } from './AgenticWorkflow';
 import { OpenAI } from 'openai';
 import { WalletManagerImpl } from '../lib/tura-wallet/wallet_manager';
 import { WalletState } from '../lib/tura-wallet/wallet_state';
+import { WalletService } from '../lib/tura-wallet/wallet';
+// @ts-expect-error bip39 module has no type declarations
+import * as bip39 from 'bip39';
+import { Buffer } from 'buffer';
+import Web3 from 'web3';
 
 /// <reference types="vite/client" />
 
@@ -24,11 +29,36 @@ export class MockWalletAgent extends AgenticWorkflow {
   ];
 
   private state: { 
-    type: 'idle' | 'awaiting_wallet_password' | 'awaiting_login_password';
+    type: 'idle' | 'awaiting_wallet_password' | 'awaiting_login_password' | 'awaiting_wallet_backup_confirm';
     address?: string;
+    mnemonic?: string;
+    privateKey?: string;
   } = { type: 'idle' };
 
   private walletManager: WalletManagerImpl;
+
+  private async generateWalletData(): Promise<{ address: string; privateKey: string; mnemonic: string }> {
+    try {
+      // Generate mnemonic
+      const entropy = new Uint8Array(16);
+      crypto.getRandomValues(entropy);
+      const mnemonic = bip39.entropyToMnemonic(Buffer.from(entropy).toString('hex'));
+      
+      // Create account using Web3
+      await this.walletManager.connect();
+      const web3 = new Web3();
+      const account = web3.eth.accounts.create();
+      
+      return {
+        address: account.address,
+        privateKey: account.privateKey,
+        mnemonic: mnemonic
+      };
+    } catch (error) {
+      console.error('Failed to generate wallet data:', error);
+      throw new Error('Failed to generate wallet data. Please try again.');
+    }
+  }
 
   constructor() {
     super(
@@ -82,30 +112,56 @@ export class MockWalletAgent extends AgenticWorkflow {
     }
   }
 
-  private async handleCreateWallet(password?: string): Promise<string> {
-    if (!password) {
-      this.state = { type: 'awaiting_wallet_password' };
-      return 'Please enter a password for your new wallet (minimum 8 characters):';
+  private async handleCreateWallet(input?: string): Promise<string> {
+    if (this.state.type === 'idle') {
+      try {
+        const tempAccount = await this.generateWalletData();
+        this.state = { 
+          type: 'awaiting_wallet_password',
+          address: tempAccount.address,
+          privateKey: tempAccount.privateKey,
+          mnemonic: tempAccount.mnemonic
+        };
+        return `🔐 IMPORTANT: Save these details securely. They will only be shown once!\n\n` +
+               `📝 Mnemonic Phrase:\n${tempAccount.mnemonic}\n\n` +
+               `🔑 Private Key:\n${tempAccount.privateKey}\n\n` +
+               `Please enter a password for your new wallet (minimum 8 characters):`;
+      } catch (error) {
+        this.state = { type: 'idle' };
+        console.error('Error generating wallet:', error);
+        return `❌ ${error instanceof Error ? error.message : 'Failed to generate wallet. Please try again.'}`;
+      }
     }
-
-    try {
-      const response = await this.walletManager.createWallet(password);
-      const balance = await this.walletManager.getBalance(response.address);
+    
+    if (this.state.type === 'awaiting_wallet_password') {
+      if (!input || input.length < 8) {
+        return 'Password must be at least 8 characters long.';
+      }
       
-      // Update WalletState
-      await WalletState.getInstance().updateState({
-        address: response.address,
-        balance,
-        isConnected: true
-      });
-      
-      return `🎉 Wallet created successfully!\nYour wallet address: ${response.address}\n\n` +
-             `🔐 Your wallet is secured with your password. Don't forget it!\n\n` +
-             `Your initial balance is ${balance} TURA.`;
-    } catch (error) {
-      console.error('Error creating wallet:', error);
-      return `❌ ${error instanceof Error ? error.message : 'Failed to create wallet. Please try again.'}`;
+      try {
+        const response = await this.walletManager.createWallet(input);
+        const balance = await this.walletManager.getBalance(response.address);
+        
+        await WalletState.getInstance().updateState({
+          address: response.address,
+          balance,
+          isConnected: true
+        });
+        
+        // Clear sensitive data
+        this.state = { type: 'idle' };
+        
+        return `🎉 Wallet created successfully!\n` +
+               `Your wallet address: ${response.address}\n\n` +
+               `Your initial balance is ${balance} TURA.`;
+      } catch (error) {
+        this.state = { type: 'idle' }; // Reset on error
+        console.error('Error creating wallet:', error);
+        return `❌ ${error instanceof Error ? error.message : 'Failed to create wallet. Please try again.'}`;
+      }
     }
+    
+    return '';
   }
 
   private async recognizeIntent(text: string): Promise<Intent> {
@@ -177,6 +233,9 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
     if (recognizedIntent.confidence >= 0.7) {
       switch (recognizedIntent.name) {
         case 'create_wallet':
+          if (this.state.type !== 'idle') {
+            return await this.handleCreateWallet(text);
+          }
           return await this.handleCreateWallet();
         case 'check_balance':
           return await this.handleBalanceCheck();
