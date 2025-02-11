@@ -139,8 +139,17 @@ export class MockWalletAgent extends AgenticWorkflow {
       }
       
       try {
-        const response = await this.walletManager.createWallet(input);
+        const response = await this.walletManager.createWallet(
+          input,
+          this.state.privateKey,
+          this.state.mnemonic
+        );
         const balance = await this.walletManager.getBalance(response.address);
+        
+        // Verify address matches
+        if (response.address.toLowerCase() !== this.state.address?.toLowerCase()) {
+          throw new Error('Created wallet address does not match generated address');
+        }
         
         await WalletState.getInstance().updateState({
           address: response.address,
@@ -210,7 +219,6 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
 
     // Handle password states
     if (this.state.type === 'awaiting_wallet_password') {
-      this.state = { type: 'idle' };
       return await this.handleCreateWallet(text);
     }
     
@@ -233,9 +241,6 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
     if (recognizedIntent.confidence >= 0.7) {
       switch (recognizedIntent.name) {
         case 'create_wallet':
-          if (this.state.type !== 'idle') {
-            return await this.handleCreateWallet(text);
-          }
           return await this.handleCreateWallet();
         case 'check_balance':
           return await this.handleBalanceCheck();

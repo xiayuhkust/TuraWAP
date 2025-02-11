@@ -253,7 +253,7 @@ export class WalletManagerImpl {
     }
   }
 
-  async createWallet(password: string): Promise<WalletResponse> {
+  async createWallet(password: string, existingPrivateKey?: string, existingMnemonic?: string): Promise<WalletResponse> {
     if (!password || password.length < 8) {
       throw new Error('Password must be at least 8 characters long');
     }
@@ -267,19 +267,21 @@ export class WalletManagerImpl {
     }
 
     try {
-      // Generate mnemonic using bip39 with proper entropy
-      const entropy = new Uint8Array(16);
-      crypto.getRandomValues(entropy);
-      const mnemonic = bip39.entropyToMnemonic(
-        Buffer.from(entropy).toString('hex')
-      );
+      let mnemonic = existingMnemonic;
+      if (!mnemonic) {
+        const entropy = new Uint8Array(16);
+        crypto.getRandomValues(entropy);
+        mnemonic = bip39.entropyToMnemonic(
+          Buffer.from(entropy).toString('hex')
+        );
+      }
 
       // Create wallet using new WalletService
-      const response = await this.walletService.createWallet(password);
+      const response = await this.walletService.createWallet(password, existingPrivateKey);
       
       const walletData: WalletData = {
         address: response.address,
-        privateKey: '', // Private key is handled by WalletService
+        privateKey: response.privateKey,
         mnemonic: mnemonic,
         createdAt: new Date().toISOString()
       };

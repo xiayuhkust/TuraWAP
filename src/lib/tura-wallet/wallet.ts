@@ -42,14 +42,17 @@ export class WalletService {
     WalletState.getInstance().updateState({ isConnected: false });
   }
 
-  public async createWallet(password: string): Promise<{ address: string; privateKey: string }> {
+  public async createWallet(password: string, existingPrivateKey?: string): Promise<{ address: string; privateKey: string }> {
     try {
       const web3 = await this.ensureConnection();
-      const account = web3.eth.accounts.create();
+      const account = existingPrivateKey ? 
+        web3.eth.accounts.privateKeyToAccount(existingPrivateKey) :
+        web3.eth.accounts.create();
       const encryptedAccount = web3.eth.accounts.encrypt(account.privateKey, password);
       localStorage.setItem(`wallet_${account.address.toLowerCase()}`, JSON.stringify(encryptedAccount));
       return { 
-        address: account.address
+        address: account.address,
+        privateKey: account.privateKey
       };
     } catch (error) {
       await WalletState.getInstance().updateState({ isConnected: false });
