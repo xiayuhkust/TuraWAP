@@ -148,21 +148,63 @@ export class WalletManagerImpl {
       .join('');
   }
 
+  private isValidEncryptedData(data: EncryptedData): boolean {
+    if (!data || typeof data !== 'object') return false;
+    if (!data.data || typeof data.data !== 'object') return false;
+    if (!data.key || typeof data.key !== 'string') return false;
+    if (!data.timestamp || typeof data.timestamp !== 'number') return false;
+    
+    // Validate WalletData
+    if ('address' in data.data) {
+      const wallet = data.data as WalletData;
+      if (!wallet.address || !wallet.createdAt) return false;
+    }
+    
+    // Validate SessionData
+    if ('expires' in data.data) {
+      const session = data.data as SessionData;
+      if (!session.password || typeof session.expires !== 'number') return false;
+    }
+    
+    return true;
+  }
+
+
   private async _encrypt(data: WalletData | SessionData, password: string): Promise<string> {
     try {
+      // Validate inputs
+      if (!data || !password) {
+        throw new Error('Invalid data or password for encryption');
+      }
+
+      if (typeof data !== 'object') {
+        throw new Error('Data must be a valid object');
+      }
+
       const key = await this._deriveKey(password);
+      if (!key) {
+        throw new Error('Failed to derive encryption key');
+      }
+
       const encryptedData: EncryptedData = {
         data: data,
         key: key,
         timestamp: Date.now()
       };
+
+      // Validate data structure before encryption
+      if (!this.isValidEncryptedData(encryptedData)) {
+        throw new Error('Invalid encrypted data structure');
+      }
+
       const encrypted = btoa(JSON.stringify(encryptedData));
       
       console.log('Encryption successful:', {
         hasData: !!data,
         hasKey: !!key,
         timestamp: new Date(encryptedData.timestamp).toLocaleString(),
-        resultLength: encrypted.length
+        resultLength: encrypted.length,
+        type: 'session' in data ? 'session' : 'wallet'
       });
       
       return encrypted;
@@ -174,31 +216,40 @@ export class WalletManagerImpl {
 
   private async _decrypt(encryptedData: string, password: string): Promise<WalletData | SessionData> {
     try {
-      if (!encryptedData) {
-        throw new Error('No encrypted data provided');
+      if (!encryptedData || !password) {
+        throw new Error('No encrypted data or password provided');
       }
       
       const key = await this._deriveKey(password);
+      if (!key) {
+        throw new Error('Failed to derive decryption key');
+      }
+
       let decoded: EncryptedData;
-      
       try {
         decoded = JSON.parse(atob(encryptedData));
-      } catch {
+      } catch (error) {
+        console.error('Failed to parse encrypted data:', error);
         throw new Error('Invalid encrypted data format');
       }
       
-      if (!decoded || typeof decoded !== 'object' || !decoded.data || !decoded.key || !decoded.timestamp) {
-        throw new Error('Invalid data structure');
+      if (!this.isValidEncryptedData(decoded)) {
+        throw new Error('Invalid encrypted data structure');
       }
       
       if (decoded.key !== key) {
         throw new Error('Invalid password');
       }
+
+      console.log('Decryption successful:', {
+        type: 'session' in decoded.data ? 'session' : 'wallet',
+        timestamp: new Date(decoded.timestamp).toLocaleString()
+      });
       
       return decoded.data;
     } catch (error) {
       console.error('Decryption failed:', error);
-      throw new Error('Decryption failed: Invalid password or data');
+      throw new Error('Decryption failed: ' + (error instanceof Error ? error.message : 'Invalid password or data'));
     }
   }
 
