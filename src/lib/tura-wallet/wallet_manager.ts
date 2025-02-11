@@ -509,7 +509,17 @@ export class WalletManagerImpl {
             expires: new Date(sessionData.expires).toLocaleString(),
             now: new Date().toLocaleString()
           });
+          // When session expires, disconnect but keep the address
+          this._isConnected = false;
+          await WalletState.getInstance().updateState({ isConnected: false });
           return null;
+        }
+
+        // Extend session time if more than 1 minute has passed since last activity
+        if (inactiveTime > 60 * 1000) {
+          sessionData.expires = Date.now() + (5 * 60 * 1000); // Extend by 5 minutes
+          const encryptedSession = await this._encrypt(sessionData, 'session');
+          sessionStorage.setItem(this.sessionKey, encryptedSession);
         }
 
         // Update last activity timestamp
