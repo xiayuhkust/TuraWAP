@@ -3,8 +3,11 @@ import { useState, useEffect } from 'react';
 import { WalletState, WalletInfo } from '../../lib/tura-wallet/wallet_state';
 import { Button } from '../ui/button';
 import { WalletDebugInfo } from './WalletDebugInfo';
+import { ReconnectDialog } from './ReconnectDialog';
+import { WalletManagerImpl } from '../../lib/tura-wallet/wallet_manager';
 
 export const WalletDisplay: React.FC = () => {
+  const [showReconnect, setShowReconnect] = useState(false);
   const [walletInfo, setWalletInfo] = useState<WalletInfo>({
     address: '',
     balance: '0',
@@ -13,15 +16,33 @@ export const WalletDisplay: React.FC = () => {
   
   useEffect(() => {
     const walletState = WalletState.getInstance();
-    const unsubscribe = walletState.subscribe(setWalletInfo);
+    const unsubscribe = walletState.subscribe((state) => {
+      setWalletInfo(state);
+      if (!state.isConnected && state.address) {
+        setShowReconnect(true);
+      }
+    });
     setWalletInfo(walletState.getState());
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
   
   const handleRefresh = async () => {
     await WalletState.getInstance().refreshBalance();
+  };
+
+  const handleReconnect = async (password: string) => {
+    const walletManager = new WalletManagerImpl();
+    await walletManager.login(walletInfo.address, password);
+    setShowReconnect(false);
+  };
+
+  const handleClearAccount = () => {
+    const walletManager = new WalletManagerImpl();
+    walletManager.logout();
+    Object.keys(localStorage)
+      .filter(key => key.startsWith('wallet_') || key === 'last_wallet_address')
+      .forEach(key => localStorage.removeItem(key));
+    setShowReconnect(false);
   };
   
   if (!walletInfo.address) return null;
@@ -91,6 +112,12 @@ export const WalletDisplay: React.FC = () => {
         </div>
       </div>
       <WalletDebugInfo />
+      <ReconnectDialog
+        open={showReconnect}
+        onClose={() => setShowReconnect(false)}
+        onReconnect={handleReconnect}
+        onClearAccount={handleClearAccount}
+      />
     </>
   );
 };
