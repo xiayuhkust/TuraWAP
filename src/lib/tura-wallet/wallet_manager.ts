@@ -61,11 +61,17 @@ export class WalletManagerImpl {
 
   private static getSessionKey(): string {
     if (!WalletManagerImpl.sessionEncryptionKey) {
-      const array = new Uint8Array(32);
-      crypto.getRandomValues(array);
-      WalletManagerImpl.sessionEncryptionKey = Array.from(array)
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      const storedKey = localStorage.getItem('wallet_session_key');
+      if (storedKey) {
+        WalletManagerImpl.sessionEncryptionKey = storedKey;
+      } else {
+        const array = new Uint8Array(32);
+        crypto.getRandomValues(array);
+        WalletManagerImpl.sessionEncryptionKey = Array.from(array)
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+        localStorage.setItem('wallet_session_key', WalletManagerImpl.sessionEncryptionKey);
+      }
     }
     return WalletManagerImpl.sessionEncryptionKey;
   }
@@ -479,6 +485,7 @@ export class WalletManagerImpl {
     sessionStorage.removeItem(this.sessionKey);
     localStorage.removeItem('last_activity');
     localStorage.removeItem(this.lastWalletKey);
+    localStorage.removeItem('wallet_session_key');  // Add cleanup of session encryption key
     this.cleanup();
     WalletState.getInstance().updateState({
       address: '',
@@ -507,6 +514,17 @@ export class WalletManagerImpl {
         const sessionData = await this._decrypt(encrypted, 'session') as SessionData;
         if (!sessionData || !sessionData.password || !sessionData.expires) {
           console.warn('Invalid session data structure:', sessionData);
+          // Create new session if decryption fails but we have a last wallet
+          const lastWallet = localStorage.getItem(this.lastWalletKey);
+          if (lastWallet) {
+            const newSession: SessionData = {
+              password: '',  // Will require re-login
+              expires: Date.now() + (5 * 60 * 1000)
+            };
+            const encryptedSession = await this._encrypt(newSession, 'session');
+            sessionStorage.setItem(this.sessionKey, encryptedSession);
+            return newSession;
+          }
           return null;
         }
 
