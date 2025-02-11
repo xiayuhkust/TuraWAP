@@ -18,6 +18,12 @@ export const WalletDebugInfo: React.FC = () => {
       const session = await walletManager.getSession();
       const currentState = walletState.getState();
       
+      console.log('Session debug:', {
+        hasSession: !!session,
+        expires: session?.expires ? new Date(session.expires).toLocaleString() : 'none',
+        remainingTime: session?.expires ? Math.floor((session.expires - Date.now()) / 1000) : 0
+      });
+      
       setDebugInfo({
         address: currentState.address,
         isConnected: currentState.isConnected,
