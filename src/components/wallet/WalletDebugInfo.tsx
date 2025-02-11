@@ -12,6 +12,10 @@ export const WalletDebugInfo: React.FC = () => {
       decryptionSuccess: false,
       lastError: '',
       lastAttempt: null as number | null
+    },
+    mnemonicStatus: {
+      exists: false,
+      lastBackupTime: null as number | null
     }
   });
 
@@ -33,6 +37,25 @@ export const WalletDebugInfo: React.FC = () => {
         lastError: '',
         lastAttempt: now
       };
+
+      // Check mnemonic status
+      let mnemonicStatus = {
+        exists: false,
+        lastBackupTime: null as number | null
+      };
+
+      if (currentState.address) {
+        try {
+          const session = await walletManager.getSession();
+          if (session?.password) {
+            const walletData = await walletManager.getWalletData(currentState.address, session.password);
+            mnemonicStatus.exists = !!walletData.mnemonic;
+            mnemonicStatus.lastBackupTime = walletData.createdAt ? new Date(walletData.createdAt).getTime() : null;
+          }
+        } catch (error) {
+          console.error('Failed to check mnemonic status:', error);
+        }
+      }
 
       try {
         const session = await walletManager.getSession();
@@ -65,14 +88,16 @@ export const WalletDebugInfo: React.FC = () => {
           address: currentState.address,
           isConnected: currentState.isConnected,
           sessionExpires: session?.expires || null,
-          sessionReadStatus
+          sessionReadStatus,
+          mnemonicStatus
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         sessionReadStatus.lastError = errorMessage;
         setDebugInfo(prev => ({
           ...prev,
-          sessionReadStatus
+          sessionReadStatus,
+          mnemonicStatus: prev.mnemonicStatus // Preserve existing mnemonic status on error
         }));
       }
     };
@@ -115,6 +140,9 @@ export const WalletDebugInfo: React.FC = () => {
       <div>Last Check: {debugInfo.sessionReadStatus.lastAttempt 
         ? new Date(debugInfo.sessionReadStatus.lastAttempt).toLocaleTimeString()
         : 'None'}</div>
+      
+      <div className="border-b pb-1 mt-3 mb-2">Wallet Status</div>
+      <div>Status: {debugInfo.address ? 'Active' : 'Not Active'}</div>
     </div>
   );
 };
