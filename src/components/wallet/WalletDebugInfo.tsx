@@ -18,10 +18,21 @@ export const WalletDebugInfo: React.FC = () => {
       const session = await walletManager.getSession();
       const currentState = walletState.getState();
       
+      const now = Date.now();
+      const remainingTime = session?.expires ? Math.floor((session.expires - now) / 1000) : 0;
+      
       console.log('Session debug:', {
         hasSession: !!session,
+        hasPassword: !!session?.password,
         expires: session?.expires ? new Date(session.expires).toLocaleString() : 'none',
-        remainingTime: session?.expires ? Math.floor((session.expires - Date.now()) / 1000) : 0
+        remainingTime,
+        now: new Date(now).toLocaleString(),
+        isConnected: currentState.isConnected,
+        address: currentState.address || 'none',
+        lastActivity: localStorage.getItem('last_activity') 
+          ? new Date(parseInt(localStorage.getItem('last_activity') || '0')).toLocaleString()
+          : 'none',
+        sessionKey: !!localStorage.getItem('wallet_session_key')
       });
       
       setDebugInfo({
@@ -51,10 +62,15 @@ export const WalletDebugInfo: React.FC = () => {
     : 0;
 
   return (
-    <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 rounded-lg text-sm font-mono">
+    <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 rounded-lg text-sm font-mono space-y-1">
       <div>Address: {debugInfo.address}</div>
       <div>Connected: {debugInfo.isConnected ? 'Yes' : 'No'}</div>
       <div>Session Time: {remainingTime}s</div>
+      <div>Has Session: {debugInfo.sessionExpires ? 'Yes' : 'No'}</div>
+      <div>Session Key: {localStorage.getItem('wallet_session_key') ? 'Present' : 'Missing'}</div>
+      <div>Last Activity: {localStorage.getItem('last_activity') 
+        ? new Date(parseInt(localStorage.getItem('last_activity') || '0')).toLocaleTimeString()
+        : 'None'}</div>
     </div>
   );
 };
