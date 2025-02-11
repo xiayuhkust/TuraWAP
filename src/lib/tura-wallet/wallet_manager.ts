@@ -432,6 +432,17 @@ export class WalletManagerImpl {
     }
   }
 
+  public listStoredWallets(): string[] {
+    try {
+      return Object.keys(localStorage)
+        .filter(key => key.startsWith(this.keyPrefix))
+        .map(key => key.slice(this.keyPrefix.length));
+    } catch (error) {
+      console.error('Failed to access localStorage:', error);
+      return [];
+    }
+  }
+
   public logout(): void {
     sessionStorage.removeItem(this.sessionKey);
     localStorage.removeItem('last_activity');
