@@ -28,29 +28,67 @@ export const WalletDisplay: React.FC = () => {
   
   return (
     <>
-      <div className="flex items-center gap-2 bg-secondary/50 rounded-lg p-2">
-        <span className="text-sm font-medium">
-          {`${walletInfo.address.slice(0, 6)}...${walletInfo.address.slice(-4)}`}
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2"
-          onClick={() => navigator.clipboard.writeText(walletInfo.address)}
-          disabled={!walletInfo.isConnected}
-        >
-          Copy
-        </Button>
-        <span className="text-sm ml-auto">{walletInfo.balance} TURA</span>
-        <Button 
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2"
-          onClick={handleRefresh}
-          disabled={!walletInfo.isConnected}
-        >
-          Refresh
-        </Button>
+      <div className="flex gap-4 bg-secondary/50 rounded-lg p-4">
+        {/* Left section - 70% width */}
+        <div className="flex-[0.7] flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">
+              {`${walletInfo.address.slice(0, 6)}...${walletInfo.address.slice(-4)}`}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2"
+              onClick={() => navigator.clipboard.writeText(walletInfo.address)}
+              disabled={!walletInfo.isConnected}
+            >
+              Copy
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">{walletInfo.balance} TURA</span>
+            <Button 
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2"
+              onClick={handleRefresh}
+              disabled={!walletInfo.isConnected}
+            >
+              Refresh
+            </Button>
+          </div>
+        </div>
+        
+        {/* Right section - 30% width */}
+        <div className="flex-[0.3] flex flex-col gap-2 justify-center">
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              sessionStorage.removeItem('wallet_session');
+              WalletState.getInstance().updateState({ isConnected: false });
+            }}
+          >
+            Leave Session
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              // Clear all wallet-related data from localStorage
+              Object.keys(localStorage)
+                .filter(key => key.startsWith('wallet_') || key === 'last_wallet_address')
+                .forEach(key => localStorage.removeItem(key));
+              WalletState.getInstance().updateState({
+                address: '',
+                balance: '0',
+                isConnected: false
+              });
+            }}
+          >
+            Clear Account
+          </Button>
+        </div>
       </div>
       <WalletDebugInfo />
     </>
