@@ -33,6 +33,9 @@ const config: UserConfig = {
   },
   build: {
     target: 'esnext'
+  },
+  optimizeDeps: {
+    include: ['react-i18next', 'i18next']
   }
 };
 
