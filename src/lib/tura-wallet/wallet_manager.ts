@@ -53,11 +53,22 @@ export interface EncryptedData {
 }
 
 export class WalletManagerImpl {
+  private static sessionEncryptionKey: string;
   private walletService: WalletService;
-  // Removed unused currentAddress field
   private readonly keyPrefix = 'wallet_';
   private readonly sessionKey = 'wallet_session';
   private readonly lastWalletKey = 'last_wallet_address';
+
+  private static getSessionKey(): string {
+    if (!WalletManagerImpl.sessionEncryptionKey) {
+      const array = new Uint8Array(32);
+      crypto.getRandomValues(array);
+      WalletManagerImpl.sessionEncryptionKey = Array.from(array)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+    return WalletManagerImpl.sessionEncryptionKey;
+  }
   private _isConnected: boolean = false;
   private connectionCheckInterval: number | null = null;
 
@@ -150,7 +161,8 @@ export class WalletManagerImpl {
 
   private async _encrypt(data: WalletData | SessionData, password: string): Promise<string> {
     try {
-      const key = await this._deriveKey(password);
+      // Use secure session key for session data, or derive key for wallet data
+      const key = password === 'session' ? WalletManagerImpl.getSessionKey() : await this._deriveKey(password);
       const encryptedData: EncryptedData = {
         data: data,
         key: key,
@@ -162,7 +174,8 @@ export class WalletManagerImpl {
         hasData: !!data,
         hasKey: !!key,
         timestamp: new Date(encryptedData.timestamp).toLocaleString(),
-        resultLength: encrypted.length
+        resultLength: encrypted.length,
+        isSession: password === 'session'
       });
       
       return encrypted;
@@ -178,7 +191,8 @@ export class WalletManagerImpl {
         throw new Error('No encrypted data provided');
       }
       
-      const key = await this._deriveKey(password);
+      // Use secure session key for session data, or derive key for wallet data
+      const key = password === 'session' ? WalletManagerImpl.getSessionKey() : await this._deriveKey(password);
       let decoded: EncryptedData;
       
       try {
