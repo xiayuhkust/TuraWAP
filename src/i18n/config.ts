@@ -51,15 +51,19 @@ const resources = {
       transactionSuccess: '✅ Successfully sent {amount} TURA!',
       transactionFailed: '❌ Transaction failed. Please try again.',
       balanceFailed: 'Failed to get balance. Please try again.',
+      mnemonicPhrase: '📝 Mnemonic Phrase:',
+      walletAddress: 'Your wallet address: {address}',
+      initialBalance: 'Your initial balance is {balance} TURA.',
+      invalidAmountAddress: 'Please provide a valid wallet address and amount to send. For example: \'send 10 TURA to 0x...\'',
+      needLogin: 'Please log in to your wallet first.',
+      passwordTooShort: 'Password must be at least 8 characters long.',
+      somethingWrong: 'Something went wrong. Please try again.',
+      createWalletFailed: 'Failed to create wallet. Please try again.',
       examples: {
         createWallet: '🔑 Create a new wallet',
         checkBalance: '💰 Check your balance',
         sendTokens: '💸 Send TURA tokens to another address'
-      },
-      passwordTooShort: 'Password must be at least 8 characters long.',
-      walletAddress: 'Your wallet address: {address}',
-      initialBalance: 'Your initial balance is {balance} TURA.',
-      createWalletFailed: 'Failed to create wallet. Please try again.'
+      }
     }
   },
   zh: {
@@ -111,15 +115,19 @@ const resources = {
       transactionSuccess: '✅ 成功发送 {amount} TURA！',
       transactionFailed: '❌ 交易失败。请重试。',
       balanceFailed: '获取余额失败。请重试。',
+      mnemonicPhrase: '📝 助记词：',
+      walletAddress: '您的钱包地址：{address}',
+      initialBalance: '您的初始余额为 {balance} TURA。',
+      invalidAmountAddress: '请提供有效的钱包地址和金额。例如："发送 10 TURA 到 0x..."',
+      needLogin: '请先登录您的钱包。',
+      passwordTooShort: '密码必须至少8个字符。',
+      somethingWrong: '出现错误。请重试。',
+      createWalletFailed: '创建钱包失败。请重试。',
       examples: {
         createWallet: '🔑 创建新钱包',
         checkBalance: '💰 查看余额',
         sendTokens: '💸 发送TURA代币'
-      },
-      passwordTooShort: '密码必须至少8个字符。',
-      walletAddress: '您的钱包地址：{address}',
-      initialBalance: '您的初始余额为 {balance} TURA。',
-      createWalletFailed: '创建钱包失败。请重试。'
+      }
     }
   }
 };
