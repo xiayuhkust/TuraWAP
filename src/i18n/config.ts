@@ -1,9 +1,6 @@
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-// Create i18next instance
-const i18n = i18next.createInstance();
-
 const resources = {
   en: {
     translation: {
@@ -127,7 +124,7 @@ const resources = {
   }
 };
 
-i18n
+i18next
   .use(initReactI18next)
   .init({
     resources,
@@ -138,4 +135,4 @@ i18n
     }
   });
 
-export default i18n;
+export default i18next;
