@@ -53,28 +53,11 @@ export interface EncryptedData {
 }
 
 export class WalletManagerImpl {
-  private static sessionEncryptionKey: string;
   private walletService: WalletService;
+  // Removed unused currentAddress field
   private readonly keyPrefix = 'wallet_';
   private readonly sessionKey = 'wallet_session';
   private readonly lastWalletKey = 'last_wallet_address';
-
-  private static getSessionKey(): string {
-    if (!WalletManagerImpl.sessionEncryptionKey) {
-      const storedKey = localStorage.getItem('wallet_session_key');
-      if (storedKey) {
-        WalletManagerImpl.sessionEncryptionKey = storedKey;
-      } else {
-        const array = new Uint8Array(32);
-        crypto.getRandomValues(array);
-        WalletManagerImpl.sessionEncryptionKey = Array.from(array)
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('');
-        localStorage.setItem('wallet_session_key', WalletManagerImpl.sessionEncryptionKey);
-      }
-    }
-    return WalletManagerImpl.sessionEncryptionKey;
-  }
   private _isConnected: boolean = false;
   private connectionCheckInterval: number | null = null;
 
@@ -167,8 +150,7 @@ export class WalletManagerImpl {
 
   private async _encrypt(data: WalletData | SessionData, password: string): Promise<string> {
     try {
-      // Use secure session key for session data, or derive key for wallet data
-      const key = password === 'session' ? WalletManagerImpl.getSessionKey() : await this._deriveKey(password);
+      const key = await this._deriveKey(password);
       const encryptedData: EncryptedData = {
         data: data,
         key: key,
@@ -180,8 +162,7 @@ export class WalletManagerImpl {
         hasData: !!data,
         hasKey: !!key,
         timestamp: new Date(encryptedData.timestamp).toLocaleString(),
-        resultLength: encrypted.length,
-        isSession: password === 'session'
+        resultLength: encrypted.length
       });
       
       return encrypted;
@@ -197,8 +178,7 @@ export class WalletManagerImpl {
         throw new Error('No encrypted data provided');
       }
       
-      // Use secure session key for session data, or derive key for wallet data
-      const key = password === 'session' ? WalletManagerImpl.getSessionKey() : await this._deriveKey(password);
+      const key = await this._deriveKey(password);
       let decoded: EncryptedData;
       
       try {
@@ -261,35 +241,12 @@ export class WalletManagerImpl {
       );
       localStorage.setItem(this.lastWalletKey, lowerAddress);
 
-      // Initialize session with 5 minute duration
-      const sessionExpiration = Date.now() + (5 * 60 * 1000);
-      console.log('Creating new session:', {
-        createdAt: new Date().toLocaleString(),
-        expires: new Date(sessionExpiration).toLocaleString(),
-        duration: '5 minutes'
-      });
-      
       const sessionData: SessionData = {
         password: password,
-        expires: sessionExpiration
+        expires: Date.now() + (5 * 60 * 1000)
       };
-      
-      // Ensure session encryption key exists
-      WalletManagerImpl.getSessionKey();
-      
       const encryptedSession = await this._encrypt(sessionData, 'session');
       sessionStorage.setItem(this.sessionKey, encryptedSession);
-      
-      // Verify session was stored correctly
-      const verifySession = await this._decrypt(encryptedSession, 'session') as SessionData;
-      if (!verifySession || !verifySession.expires || verifySession.expires !== sessionExpiration) {
-        console.error('Session verification failed:', {
-          hasSession: !!verifySession,
-          expectedExpires: new Date(sessionExpiration).toLocaleString(),
-          actualExpires: verifySession?.expires ? new Date(verifySession.expires).toLocaleString() : 'none'
-        });
-        throw new Error('Failed to initialize session properly');
-      }
 
       // Update wallet state
       await WalletState.getInstance().updateState({
@@ -364,35 +321,13 @@ export class WalletManagerImpl {
 
       localStorage.setItem(this.lastWalletKey, walletData.address.toLowerCase());
       
-      // Initialize session with 5 minute duration
-      const sessionExpiration = Date.now() + (5 * 60 * 1000);
-      console.log('Creating new session on login:', {
-        createdAt: new Date().toLocaleString(),
-        expires: new Date(sessionExpiration).toLocaleString(),
-        duration: '5 minutes'
-      });
-      
       const sessionData: SessionData = {
         password: password,
-        expires: sessionExpiration
+        expires: Date.now() + (5 * 60 * 1000)
       };
-      
-      // Ensure session encryption key exists
-      WalletManagerImpl.getSessionKey();
       
       const encryptedSession = await this._encrypt(sessionData, 'session');
       sessionStorage.setItem(this.sessionKey, encryptedSession);
-      
-      // Verify session was stored correctly
-      const verifySession = await this._decrypt(encryptedSession, 'session') as SessionData;
-      if (!verifySession || !verifySession.expires || verifySession.expires !== sessionExpiration) {
-        console.error('Session verification failed on login:', {
-          hasSession: !!verifySession,
-          expectedExpires: new Date(sessionExpiration).toLocaleString(),
-          actualExpires: verifySession?.expires ? new Date(verifySession.expires).toLocaleString() : 'none'
-        });
-        throw new Error('Failed to initialize session properly during login');
-      }
 
       // Update wallet state
       const balance = await this.getBalance(walletData.address);
@@ -530,7 +465,6 @@ export class WalletManagerImpl {
     sessionStorage.removeItem(this.sessionKey);
     localStorage.removeItem('last_activity');
     localStorage.removeItem(this.lastWalletKey);
-    localStorage.removeItem('wallet_session_key');  // Add cleanup of session encryption key
     this.cleanup();
     WalletState.getInstance().updateState({
       address: '',
@@ -544,56 +478,21 @@ export class WalletManagerImpl {
   }
 
   async getSession(): Promise<SessionData | null> {
-    if (!window.sessionStorage) {
-      console.warn('Session storage not available');
-      return null;
-    }
-
-    const encrypted = sessionStorage.getItem(this.sessionKey);
-    if (!encrypted) {
-      return null;
-    }
-
     try {
-      // Ensure session encryption key exists
-      WalletManagerImpl.getSessionKey();
-      
-      const sessionData = await this._decrypt(encrypted, 'session') as SessionData;
-        
-        // Log session data for debugging
-        console.log('Decrypted session data:', {
-          hasPassword: !!sessionData?.password,
-          expires: sessionData?.expires ? new Date(sessionData.expires).toLocaleString() : 'none',
-          remainingTime: sessionData?.expires ? Math.floor((sessionData.expires - Date.now()) / 1000) : 0,
-          now: new Date().toLocaleString()
-        });
+      if (!window.sessionStorage) {
+        console.warn('Session storage not available');
+        return null;
+      }
 
-        // Validate session data structure
-        if (!sessionData || typeof sessionData !== 'object') {
-          console.warn('Invalid session data format:', sessionData);
-          return null;
-        }
+      const encrypted = sessionStorage.getItem(this.sessionKey);
+      if (!encrypted) {
+        return null;
+      }
 
-        // Handle missing or invalid session data
-        if (!sessionData.password || !sessionData.expires) {
-          console.warn('Incomplete session data:', { 
-            hasPassword: !!sessionData.password, 
-            hasExpires: !!sessionData.expires,
-            sessionData
-          });
-          return null;
-        }
-        
-        // Validate expiration time
-        if (typeof sessionData.expires !== 'number' || isNaN(sessionData.expires)) {
-          console.error('Invalid session expiration time:', sessionData.expires);
-          return null;
-        }
-        
-        // Only proceed if we have a valid session
-        const lastWallet = localStorage.getItem(this.lastWalletKey);
-        if (!lastWallet) {
-          console.warn('No last wallet found for session');
+      try {
+        const sessionData = await this._decrypt(encrypted, 'session') as SessionData;
+        if (!sessionData || !sessionData.password || !sessionData.expires) {
+          console.warn('Invalid session data structure:', sessionData);
           return null;
         }
 
@@ -601,27 +500,14 @@ export class WalletManagerImpl {
         const lastActivity = parseInt(localStorage.getItem('last_activity') || '0');
         const inactiveTime = Date.now() - lastActivity;
         if (inactiveTime > 30 * 60 * 1000) { // 30 minutes
-          console.log('Session inactive timeout reached:', {
-            lastActivity: new Date(lastActivity).toLocaleString(),
-            inactiveTime: Math.floor(inactiveTime / 1000),
-            threshold: 30 * 60
-          });
           this.logout();
           return null;
         }
 
-        // Always update last activity timestamp for valid sessions
-        localStorage.setItem('last_activity', Date.now().toString());
-
-        // Check session expiration
-        const now = Date.now();
-        const remainingTime = Math.max(0, Math.floor((sessionData.expires - now) / 1000));
-        
-        if (sessionData.expires <= now) {
+        if (sessionData.expires <= Date.now()) {
           console.log('Session expired:', {
             expires: new Date(sessionData.expires).toLocaleString(),
-            now: new Date(now).toLocaleString(),
-            remainingTime
+            now: new Date().toLocaleString()
           });
           // When session expires, disconnect but keep the address
           this._isConnected = false;
@@ -629,41 +515,21 @@ export class WalletManagerImpl {
           return null;
         }
 
-        // Extend session time if less than 4 minutes remaining
-        if (remainingTime < 240) {
-          const oldExpires = sessionData.expires;
-          sessionData.expires = now + (5 * 60 * 1000); // Reset to 5 minutes
-          
-          try {
-            const encryptedSession = await this._encrypt(sessionData, 'session');
-            sessionStorage.setItem(this.sessionKey, encryptedSession);
-            
-            console.log('Session extended:', {
-              oldExpires: new Date(oldExpires).toLocaleString(),
-              newExpires: new Date(sessionData.expires).toLocaleString(),
-              oldRemainingTime: remainingTime,
-              newRemainingTime: 300 // 5 minutes in seconds
-            });
-          } catch (error) {
-            console.error('Failed to extend session:', error);
-            // Keep the old expiration time on encryption failure
-            sessionData.expires = oldExpires;
-          }
-        } else {
-          console.log('Session status:', {
-            expires: new Date(sessionData.expires).toLocaleString(),
-            remainingTime,
-            now: new Date(now).toLocaleString()
-          });
+        // Extend session time if more than 1 minute has passed since last activity
+        if (inactiveTime > 60 * 1000) {
+          sessionData.expires = Date.now() + (5 * 60 * 1000); // Extend by 5 minutes
+          const encryptedSession = await this._encrypt(sessionData, 'session');
+          sessionStorage.setItem(this.sessionKey, encryptedSession);
         }
 
+        // Update last activity timestamp
+        localStorage.setItem('last_activity', Date.now().toString());
         return sessionData;
-      } catch (error: unknown) {
-        console.error('Failed to process session:', error);
+      } catch {
         return null;
       }
-    } catch (error: unknown) {
-      console.error('Failed to access session storage:', error);
+    } catch (error) {
+      console.error('Failed to get session:', error);
       return null;
     }
   }
