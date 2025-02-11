@@ -51,10 +51,10 @@ export const ReconnectDialog: React.FC<ReconnectDialogProps> = ({
       }
       onClose();
     }}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] bg-[#313338] border-[#393B40]">
         <DialogHeader>
-          <DialogTitle>Session Expired</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white">Session Expired</DialogTitle>
+          <DialogDescription className="text-gray-300">
             Your session has expired. Please enter your password to reconnect or clear your account.
           </DialogDescription>
         </DialogHeader>
@@ -70,7 +70,7 @@ export const ReconnectDialog: React.FC<ReconnectDialogProps> = ({
                 handleReconnect();
               }
             }}
-            className="col-span-3"
+            className="col-span-3 bg-[#383a40] text-white border-[#393B40]"
           />
           {error && (
             <p className="text-sm text-destructive">{error}</p>
@@ -82,12 +82,14 @@ export const ReconnectDialog: React.FC<ReconnectDialogProps> = ({
               variant="destructive"
               onClick={onClearAccount}
               disabled={loading}
+              className="bg-[#2b2d31] hover:bg-[#2F3136]"
             >
               Clear Account
             </Button>
             <Button
               onClick={handleReconnect}
               disabled={!password || loading}
+              className="bg-[#2b2d31] text-white hover:bg-[#2F3136]"
             >
               {loading ? 'Reconnecting...' : 'Reconnect'}
             </Button>

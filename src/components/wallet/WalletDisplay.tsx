@@ -111,7 +111,9 @@ export const WalletDisplay: React.FC = () => {
           </Button>
         </div>
       </div>
-      <WalletDebugInfo />
+      <div className="hidden">
+        <WalletDebugInfo />
+      </div>
       <ReconnectDialog
         open={showReconnect}
         onClose={() => setShowReconnect(false)}
