@@ -1,15 +1,19 @@
 import i18next from 'i18next';
-import { InitOptions } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
+// Initialize i18next instance
+const i18n = i18next;
+
+// Add type declarations
 declare module 'i18next' {
   interface i18n {
     use(plugin: any): this;
-    init(options: InitOptions): this;
+    init(options: any): this;
   }
 }
 
-const i18n = i18next;
+// Cast i18next to include use method
+(i18n as any)
 
 const resources = {
   en: {
