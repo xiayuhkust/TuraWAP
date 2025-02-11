@@ -29,10 +29,11 @@ export class MockWalletAgent extends AgenticWorkflow {
   ];
 
   private state: { 
-    type: 'idle' | 'awaiting_wallet_password' | 'awaiting_login_password' | 'awaiting_wallet_backup_confirm';
+    type: 'idle' | 'awaiting_initial_password' | 'awaiting_wallet_password' | 'awaiting_login_password' | 'awaiting_wallet_backup_confirm';
     address?: string;
     mnemonic?: string;
     privateKey?: string;
+    password?: string;
   } = { type: 'idle' };
 
   private walletManager: WalletManagerImpl;
@@ -114,18 +115,28 @@ export class MockWalletAgent extends AgenticWorkflow {
 
   private async handleCreateWallet(input?: string): Promise<string> {
     if (this.state.type === 'idle') {
+      this.state = { type: 'awaiting_initial_password' };
+      return 'Please enter a password for your new wallet (minimum 8 characters):';
+    }
+    
+    if (this.state.type === 'awaiting_initial_password') {
+      if (!input || input.length < 8) {
+        return 'Password must be at least 8 characters long.';
+      }
+      
       try {
         const tempAccount = await this.generateWalletData();
         this.state = { 
-          type: 'awaiting_wallet_password',
+          type: 'awaiting_wallet_backup_confirm',
           address: tempAccount.address,
           privateKey: tempAccount.privateKey,
-          mnemonic: tempAccount.mnemonic
+          mnemonic: tempAccount.mnemonic,
+          password: input
         };
         return `🔐 IMPORTANT: Save these details securely. They will only be shown once!\n\n` +
                `📝 Mnemonic Phrase:\n${tempAccount.mnemonic}\n\n` +
                `🔑 Private Key:\n${tempAccount.privateKey}\n\n` +
-               `Please enter a password for your new wallet (minimum 8 characters):`;
+               `Type 'confirm' to complete wallet creation:`;
       } catch (error) {
         this.state = { type: 'idle' };
         console.error('Error generating wallet:', error);
@@ -133,16 +144,14 @@ export class MockWalletAgent extends AgenticWorkflow {
       }
     }
     
-    if (this.state.type === 'awaiting_wallet_password') {
-      if (!input || input.length < 8) {
-        return 'Password must be at least 8 characters long.';
+    if (this.state.type === 'awaiting_wallet_backup_confirm') {
+      if (input?.toLowerCase() !== 'confirm') {
+        return 'Please type "confirm" to complete wallet creation:';
       }
       
       try {
         const response = await this.walletManager.createWallet(
-          input,
-          this.state.privateKey,
-          this.state.mnemonic
+          this.state.password!
         );
         const balance = await this.walletManager.getBalance(response.address);
         
@@ -218,7 +227,8 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
     }
 
     // Handle password states
-    if (this.state.type === 'awaiting_wallet_password') {
+    if (this.state.type === 'awaiting_initial_password' || 
+        this.state.type === 'awaiting_wallet_backup_confirm') {
       return await this.handleCreateWallet(text);
     }
     
