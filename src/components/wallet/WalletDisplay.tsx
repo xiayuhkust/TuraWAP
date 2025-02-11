@@ -29,6 +29,21 @@ export const WalletDisplay: React.FC = () => {
   const handleRefresh = async () => {
     await WalletState.getInstance().refreshBalance();
   };
+
+  const handleReconnect = async (password: string) => {
+    const walletManager = new WalletManagerImpl();
+    await walletManager.login(walletInfo.address, password);
+    setShowReconnect(false);
+  };
+
+  const handleClearAccount = () => {
+    const walletManager = new WalletManagerImpl();
+    walletManager.logout();
+    Object.keys(localStorage)
+      .filter(key => key.startsWith('wallet_') || key === 'last_wallet_address')
+      .forEach(key => localStorage.removeItem(key));
+    setShowReconnect(false);
+  };
   
   if (!walletInfo.address) return null;
   
@@ -100,19 +115,8 @@ export const WalletDisplay: React.FC = () => {
       <ReconnectDialog
         open={showReconnect}
         onClose={() => setShowReconnect(false)}
-        onReconnect={async (password) => {
-          const walletManager = new WalletManagerImpl();
-          await walletManager.login(walletInfo.address, password);
-          setShowReconnect(false);
-        }}
-        onClearAccount={() => {
-          const walletManager = new WalletManagerImpl();
-          walletManager.logout();
-          Object.keys(localStorage)
-            .filter(key => key.startsWith('wallet_') || key === 'last_wallet_address')
-            .forEach(key => localStorage.removeItem(key));
-          setShowReconnect(false);
-        }}
+        onReconnect={handleReconnect}
+        onClearAccount={handleClearAccount}
       />
     </>
   );
