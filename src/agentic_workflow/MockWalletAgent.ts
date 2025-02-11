@@ -17,11 +17,48 @@ const openai = new OpenAI({
 });
 
 export class MockWalletAgent extends AgenticWorkflow {
-  protected exampleTxt = [
-    "🔑 Create a new wallet",
-    "💰 Check your balance", 
-    "💸 Send TURA tokens to another address"
-  ];
+  private messages = {
+    en: {
+      createWallet: "🔑 Create a new wallet",
+      checkBalance: "💰 Check your balance",
+      sendTokens: "💸 Send TURA tokens to another address",
+      enterPassword: "Please enter a password for your new wallet (minimum 8 characters):",
+      invalidPassword: "Password must be at least 8 characters long.",
+      walletCreated: "🎉 Wallet created successfully!\n\n🔐 IMPORTANT: Save these details securely. They will only be shown once!",
+      invalidAddress: "Invalid wallet address format. Please provide a valid Ethereum address.",
+      loginPrompt: "Please enter your wallet password:",
+      loginFailed: "Failed to process login request. Please try again.",
+      needWallet: "You need to create or import a wallet first. Type 'create wallet' to get started.",
+      balanceFailed: "Failed to get balance. Please try again.",
+      loginSuccess: "✅ Successfully logged in! You can now check your balance or send tokens.",
+      transactionFailed: "❌ Transaction failed. Please try again."
+    },
+    zh: {
+      createWallet: "🔑 创建新钱包",
+      checkBalance: "💰 查看余额",
+      sendTokens: "💸 发送TURA代币",
+      enterPassword: "请输入新钱包的密码（至少8个字符）：",
+      invalidPassword: "密码必须至少8个字符。",
+      walletCreated: "🎉 钱包创建成功！\n\n🔐 重要：请安全保存以下信息，这些信息只会显示一次！",
+      invalidAddress: "无效的钱包地址格式。请提供有效的以太坊地址。",
+      loginPrompt: "请输入钱包密码：",
+      loginFailed: "登录请求处理失败。请重试。",
+      needWallet: "您需要先创建或导入钱包。输入"创建钱包"开始。",
+      balanceFailed: "获取余额失败。请重试。",
+      loginSuccess: "✅ 登录成功！您现在可以查看余额或发送代币。",
+      transactionFailed: "❌ 交易失败。请重试。"
+    }
+  };
+
+  private currentLang = localStorage.getItem('language') || 'en';
+
+  protected get exampleTxt(): string[] {
+    return [
+      this.messages[this.currentLang].createWallet,
+      this.messages[this.currentLang].checkBalance,
+      this.messages[this.currentLang].sendTokens
+    ];
+  };
 
   private state: { 
     type: 'idle' | 'awaiting_wallet_password' | 'awaiting_login_password';
@@ -49,21 +86,21 @@ export class MockWalletAgent extends AgenticWorkflow {
     try {
       // Validate address format
       if (!address.startsWith('0x') || address.length !== 42) {
-        return "Invalid wallet address format. Please provide a valid Ethereum address.";
+        return this.messages[this.currentLang].invalidAddress;
       }
 
       this.state = { type: 'awaiting_login_password', address };
-      return "Please enter your wallet password:";
+      return this.messages[this.currentLang].loginPrompt;
     } catch (error) {
       console.error('Login error:', error);
-      return "Failed to process login request. Please try again.";
+      return this.messages[this.currentLang].loginFailed;
     }
   }
 
   private async handleBalanceCheck(): Promise<string> {
     const address = await this.walletManager.getCurrentAddress();
     if (!address) {
-      return "You need to create or import a wallet first. Type 'create wallet' to get started.";
+      return this.messages[this.currentLang].needWallet;
     }
 
     try {
@@ -80,19 +117,19 @@ export class MockWalletAgent extends AgenticWorkflow {
       return `💰 Your wallet (${shortAddress}) contains ${balance} TURA`;
     } catch (error) {
       console.error('Failed to get balance:', error);
-      return `❌ ${error instanceof Error ? error.message : 'Failed to get balance. Please try again.'}`;
+      return `❌ ${error instanceof Error ? error.message : this.messages[this.currentLang].balanceFailed}`;
     }
   }
 
   private async handleCreateWallet(input?: string): Promise<string> {
     if (this.state.type === 'idle') {
       this.state = { type: 'awaiting_wallet_password' };
-      return 'Please enter a password for your new wallet (minimum 8 characters):';
+      return this.messages[this.currentLang].enterPassword;
     }
     
     if (this.state.type === 'awaiting_wallet_password') {
       if (!input || input.length < 8) {
-        return 'Password must be at least 8 characters long.';
+        return this.messages[this.currentLang].invalidPassword;
       }
       
       try {
@@ -108,8 +145,7 @@ export class MockWalletAgent extends AgenticWorkflow {
         // Clear state
         this.state = { type: 'idle' };
         
-        return `🎉 Wallet created successfully!\n\n` +
-               `🔐 IMPORTANT: Save these details securely. They will only be shown once!\n\n` +
+        return `${this.messages[this.currentLang].walletCreated}\n\n` +
                `📝 Mnemonic Phrase:\n${response.mnemonic}\n\n` +
                `Your wallet address: ${response.address}\n\n` +
                `Your initial balance is ${balance} TURA.`;
@@ -180,9 +216,9 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
       }
       try {
         await this.walletManager.login(address, text);
-        return "✅ Successfully logged in! You can now check your balance or send tokens.";
+        return this.messages[this.currentLang].loginSuccess;
       } catch (error) {
-        return "❌ Login failed. Please check your password and try again.";
+        return this.messages[this.currentLang].loginFailed;
       }
     }
     
@@ -224,13 +260,13 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
             );
 
             if (!receipt.status) {
-              return "❌ Transaction failed. Please try again.";
+              return this.messages[this.currentLang].transactionFailed;
             }
 
             return `✅ Successfully sent ${amountMatch[0]} TURA!`;
           } catch (error) {
             console.error('Transaction error:', error);
-            return `❌ ${error instanceof Error ? error.message : 'Transaction failed. Please try again.'}`; 
+            return `❌ ${error instanceof Error ? error.message : this.messages[this.currentLang].transactionFailed}`;
           }
         case 'login':
           const addressMatch = text.match(/0x[a-fA-F0-9]{40}/);
