@@ -57,6 +57,7 @@ export class WalletManagerImpl {
   // Removed unused currentAddress field
   private readonly keyPrefix = 'wallet_';
   private readonly sessionKey = 'wallet_session';
+  private readonly lastWalletKey = 'last_wallet_address';
   private _isConnected: boolean = false;
   private connectionCheckInterval: number | null = null;
 
@@ -233,10 +234,12 @@ export class WalletManagerImpl {
       };
 
       const encrypted = await this._encrypt(walletData, password);
+      const lowerAddress = response.address.toLowerCase();
       localStorage.setItem(
-        `${this.keyPrefix}${response.address.toLowerCase()}`,
+        `${this.keyPrefix}${lowerAddress}`,
         encrypted
       );
+      localStorage.setItem(this.lastWalletKey, lowerAddress);
 
       const sessionData: SessionData = {
         password: password,
@@ -314,6 +317,9 @@ export class WalletManagerImpl {
         throw new Error('Invalid wallet data');
       }
 
+      // Store last used wallet address
+      localStorage.setItem(this.lastWalletKey, walletData.address.toLowerCase());
+      
       const sessionData: SessionData = {
         password: password,
         expires: Date.now() + (5 * 60 * 1000)
@@ -411,7 +417,18 @@ export class WalletManagerImpl {
         return null;
       }
 
-      // Get all wallet addresses from localStorage
+      // Try last used wallet first
+      const lastAddress = localStorage.getItem(this.lastWalletKey);
+      if (lastAddress) {
+        try {
+          await this.getWalletData(lastAddress, session.password);
+          return lastAddress;
+        } catch {
+          // Last used wallet not accessible, continue to check others
+        }
+      }
+
+      // Fall back to checking all wallets
       const addresses = Object.keys(localStorage)
         .filter(key => key.startsWith(this.keyPrefix))
         .map(key => key.slice(this.keyPrefix.length));

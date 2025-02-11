@@ -21,7 +21,7 @@ export class WalletState {
       isConnected: false
     };
     
-    // Initialize from localStorage if wallet exists
+    // Initialize from localStorage immediately
     this.initializeFromStorage().catch(error => {
       console.error('Failed to initialize from storage:', error);
     });

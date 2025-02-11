@@ -41,7 +41,12 @@ export class MockWalletAgent extends AgenticWorkflow {
 
   private async handleLogin(address?: string): Promise<string> {
     if (!address) {
-      return "Please provide your wallet address to log in.";
+      // Try to get stored wallet address
+      const storedAddress = await this.walletManager.getCurrentAddress();
+      if (!storedAddress) {
+        return ""; // Don't process if no address is provided or stored
+      }
+      address = storedAddress;
     }
 
     try {
