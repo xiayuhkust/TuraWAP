@@ -245,6 +245,11 @@ export class WalletManagerImpl {
         password: password,
         expires: Date.now() + (5 * 60 * 1000)
       };
+      
+      // Store session status for debug visibility (not the actual key)
+      localStorage.setItem('wallet_session_key', 'active');
+      
+      // Use a constant key for session encryption
       const encryptedSession = await this._encrypt(sessionData, 'session');
       sessionStorage.setItem(this.sessionKey, encryptedSession);
 
@@ -326,6 +331,10 @@ export class WalletManagerImpl {
         expires: Date.now() + (5 * 60 * 1000)
       };
       
+      // Store session status for debug visibility (not the actual key)
+      localStorage.setItem('wallet_session_key', 'active');
+      
+      // Use a constant key for session encryption
       const encryptedSession = await this._encrypt(sessionData, 'session');
       sessionStorage.setItem(this.sessionKey, encryptedSession);
 
@@ -465,6 +474,7 @@ export class WalletManagerImpl {
     sessionStorage.removeItem(this.sessionKey);
     localStorage.removeItem('last_activity');
     localStorage.removeItem(this.lastWalletKey);
+    localStorage.removeItem('wallet_session_key'); // Clean up session key
     this.cleanup();
     WalletState.getInstance().updateState({
       address: '',
