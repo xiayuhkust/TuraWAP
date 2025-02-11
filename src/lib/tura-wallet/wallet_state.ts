@@ -28,17 +28,34 @@ export class WalletState {
   }
 
   private async initializeFromStorage(): Promise<void> {
-    const wallets = this.walletManager.listStoredWallets();
-    if (wallets.length > 0) {
-      const session = await this.walletManager.getSession();
-      if (session?.password) {
-        const address = wallets[0];
-        const balance = await this.walletManager.getBalance(address);
+    const session = await this.walletManager.getSession();
+    const lastWallet = localStorage.getItem('last_wallet_address');
+    
+    if (lastWallet) {
+      try {
+        const balance = await this.walletManager.getBalance(lastWallet);
         await this.updateState({
-          address,
+          address: lastWallet,
           balance,
-          isConnected: await this.walletManager.isConnected()
+          isConnected: session?.password ? await this.walletManager.isConnected() : false
         });
+      } catch (error) {
+        console.error('Failed to load last wallet:', error);
+      }
+    } else {
+      const wallets = this.walletManager.listStoredWallets();
+      if (wallets.length > 0) {
+        const address = wallets[0];
+        try {
+          const balance = await this.walletManager.getBalance(address);
+          await this.updateState({
+            address,
+            balance,
+            isConnected: session?.password ? await this.walletManager.isConnected() : false
+          });
+        } catch (error) {
+          console.error('Failed to load wallet:', error);
+        }
       }
     }
   }
