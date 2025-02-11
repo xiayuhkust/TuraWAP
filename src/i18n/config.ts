@@ -1,5 +1,4 @@
-import i18next from 'i18next';
-import { InitOptions } from 'i18next';
+import { default as i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 const resources = {
@@ -125,7 +124,7 @@ const resources = {
   }
 };
 
-i18next
+i18n
   .use(initReactI18next)
   .init({
     resources,
@@ -136,4 +135,4 @@ i18next
     }
   });
 
-export default i18next;
+export default i18n;
