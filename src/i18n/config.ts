@@ -38,6 +38,28 @@ const resources = {
       unknownError: 'Unknown error',
       transactionFailed: 'Transaction failed',
       speechToTextFailed: 'Failed to convert speech to text. Please try again.'
+    },
+    agent: {
+      createWalletPrompt: 'Please enter a password for your new wallet (minimum 8 characters):',
+      walletCreatedSuccess: '🎉 Wallet created successfully!\n\n🔐 IMPORTANT: Save these details securely. They will only be shown once!',
+      balanceTemplate: '💰 Your wallet ({address}) contains {amount} TURA',
+      loginPrompt: 'Please enter your wallet password:',
+      loginSuccess: '✅ Successfully logged in! You can now check your balance or send tokens.',
+      loginFailed: '❌ Login failed. Please check your password and try again.',
+      invalidAddress: 'Invalid wallet address format. Please provide a valid Ethereum address.',
+      needWalletFirst: 'You need to create or import a wallet first. Type \'create wallet\' to get started.',
+      transactionSuccess: '✅ Successfully sent {amount} TURA!',
+      transactionFailed: '❌ Transaction failed. Please try again.',
+      balanceFailed: 'Failed to get balance. Please try again.',
+      examples: {
+        createWallet: '🔑 Create a new wallet',
+        checkBalance: '💰 Check your balance',
+        sendTokens: '💸 Send TURA tokens to another address'
+      },
+      passwordTooShort: 'Password must be at least 8 characters long.',
+      walletAddress: 'Your wallet address: {address}',
+      initialBalance: 'Your initial balance is {balance} TURA.',
+      createWalletFailed: 'Failed to create wallet. Please try again.'
     }
   },
   zh: {
@@ -76,6 +98,28 @@ const resources = {
       unknownError: '未知错误',
       transactionFailed: '交易失败',
       speechToTextFailed: '语音转文字失败，请重试'
+    },
+    agent: {
+      createWalletPrompt: '请输入新钱包的密码（至少8个字符）：',
+      walletCreatedSuccess: '🎉 钱包创建成功！\n\n🔐 重要：请安全保存以下信息，这些信息只会显示一次！',
+      balanceTemplate: '💰 您的钱包（{address}）余额为 {amount} TURA',
+      loginPrompt: '请输入钱包密码：',
+      loginSuccess: '✅ 登录成功！您现在可以查看余额或发送代币。',
+      loginFailed: '❌ 登录失败。请检查密码后重试。',
+      invalidAddress: '无效的钱包地址格式。请提供有效的以太坊地址。',
+      needWalletFirst: '您需要先创建或导入钱包。输入"创建钱包"开始。',
+      transactionSuccess: '✅ 成功发送 {amount} TURA！',
+      transactionFailed: '❌ 交易失败。请重试。',
+      balanceFailed: '获取余额失败。请重试。',
+      examples: {
+        createWallet: '🔑 创建新钱包',
+        checkBalance: '💰 查看余额',
+        sendTokens: '💸 发送TURA代币'
+      },
+      passwordTooShort: '密码必须至少8个字符。',
+      walletAddress: '您的钱包地址：{address}',
+      initialBalance: '您的初始余额为 {balance} TURA。',
+      createWalletFailed: '创建钱包失败。请重试。'
     }
   }
 };

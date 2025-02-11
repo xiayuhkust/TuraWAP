@@ -1,5 +1,6 @@
 import { AgenticWorkflow, Intent } from './AgenticWorkflow';
 import { OpenAI } from 'openai';
+import { useTranslation } from 'react-i18next';
 import { WalletManagerImpl } from '../lib/tura-wallet/wallet_manager';
 import { WalletState } from '../lib/tura-wallet/wallet_state';
 
@@ -17,11 +18,18 @@ const openai = new OpenAI({
 });
 
 export class MockWalletAgent extends AgenticWorkflow {
-  protected exampleTxt = [
-    "🔑 Create a new wallet",
-    "💰 Check your balance", 
-    "💸 Send TURA tokens to another address"
-  ];
+  private getT() {
+    const { t } = useTranslation();
+    return t;
+  }
+
+  protected get exampleTxt(): string[] {
+    return [
+      this.getT()('agent.examples.createWallet'),
+      this.getT()('agent.examples.checkBalance'),
+      this.getT()('agent.examples.sendTokens')
+    ];
+  }
 
   private state: { 
     type: 'idle' | 'awaiting_wallet_password' | 'awaiting_login_password';
@@ -42,6 +50,7 @@ export class MockWalletAgent extends AgenticWorkflow {
   }
 
   private async handleLogin(address?: string): Promise<string> {
+    const t = this.getT();
     if (!address) {
       return ""; // Don't process if no address is provided
     }
@@ -49,14 +58,14 @@ export class MockWalletAgent extends AgenticWorkflow {
     try {
       // Validate address format
       if (!address.startsWith('0x') || address.length !== 42) {
-        return "Invalid wallet address format. Please provide a valid Ethereum address.";
+        return t('agent.invalidAddress');
       }
 
       this.state = { type: 'awaiting_login_password', address };
-      return "Please enter your wallet password:";
+      return t('agent.loginPrompt');
     } catch (error) {
       console.error('Login error:', error);
-      return "Failed to process login request. Please try again.";
+      return t('agent.loginFailed');
     }
   }
 
