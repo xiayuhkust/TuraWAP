@@ -1,5 +1,15 @@
-import { default as i18n } from 'i18next';
+import i18next from 'i18next';
+import { InitOptions } from 'i18next';
 import { initReactI18next } from 'react-i18next';
+
+declare module 'i18next' {
+  interface i18n {
+    use(plugin: any): this;
+    init(options: InitOptions): this;
+  }
+}
+
+const i18n = i18next;
 
 const resources = {
   en: {
