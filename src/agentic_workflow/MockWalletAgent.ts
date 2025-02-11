@@ -2,11 +2,6 @@ import { AgenticWorkflow, Intent } from './AgenticWorkflow';
 import { OpenAI } from 'openai';
 import { WalletManagerImpl } from '../lib/tura-wallet/wallet_manager';
 import { WalletState } from '../lib/tura-wallet/wallet_state';
-import { WalletService } from '../lib/tura-wallet/wallet';
-// @ts-expect-error bip39 module has no type declarations
-import * as bip39 from 'bip39';
-import { Buffer } from 'buffer';
-import Web3 from 'web3';
 
 /// <reference types="vite/client" />
 
@@ -29,37 +24,13 @@ export class MockWalletAgent extends AgenticWorkflow {
   ];
 
   private state: { 
-    type: 'idle' | 'awaiting_initial_password' | 'awaiting_wallet_password' | 'awaiting_login_password' | 'awaiting_wallet_backup_confirm';
+    type: 'idle' | 'awaiting_wallet_password' | 'awaiting_login_password';
     address?: string;
     mnemonic?: string;
     privateKey?: string;
-    password?: string;
   } = { type: 'idle' };
 
   private walletManager: WalletManagerImpl;
-
-  private async generateWalletData(): Promise<{ address: string; privateKey: string; mnemonic: string }> {
-    try {
-      // Generate mnemonic
-      const entropy = new Uint8Array(16);
-      crypto.getRandomValues(entropy);
-      const mnemonic = bip39.entropyToMnemonic(Buffer.from(entropy).toString('hex'));
-      
-      // Create account using Web3
-      await this.walletManager.connect();
-      const web3 = new Web3();
-      const account = web3.eth.accounts.create();
-      
-      return {
-        address: account.address,
-        privateKey: account.privateKey,
-        mnemonic: mnemonic
-      };
-    } catch (error) {
-      console.error('Failed to generate wallet data:', error);
-      throw new Error('Failed to generate wallet data. Please try again.');
-    }
-  }
 
   constructor() {
     super(
@@ -115,50 +86,18 @@ export class MockWalletAgent extends AgenticWorkflow {
 
   private async handleCreateWallet(input?: string): Promise<string> {
     if (this.state.type === 'idle') {
-      this.state = { type: 'awaiting_initial_password' };
+      this.state = { type: 'awaiting_wallet_password' };
       return 'Please enter a password for your new wallet (minimum 8 characters):';
     }
     
-    if (this.state.type === 'awaiting_initial_password') {
+    if (this.state.type === 'awaiting_wallet_password') {
       if (!input || input.length < 8) {
         return 'Password must be at least 8 characters long.';
       }
       
       try {
-        const tempAccount = await this.generateWalletData();
-        this.state = { 
-          type: 'awaiting_wallet_backup_confirm',
-          address: tempAccount.address,
-          privateKey: tempAccount.privateKey,
-          mnemonic: tempAccount.mnemonic,
-          password: input
-        };
-        return `🔐 IMPORTANT: Save these details securely. They will only be shown once!\n\n` +
-               `📝 Mnemonic Phrase:\n${tempAccount.mnemonic}\n\n` +
-               `🔑 Private Key:\n${tempAccount.privateKey}\n\n` +
-               `Type 'confirm' to complete wallet creation:`;
-      } catch (error) {
-        this.state = { type: 'idle' };
-        console.error('Error generating wallet:', error);
-        return `❌ ${error instanceof Error ? error.message : 'Failed to generate wallet. Please try again.'}`;
-      }
-    }
-    
-    if (this.state.type === 'awaiting_wallet_backup_confirm') {
-      if (input?.toLowerCase() !== 'confirm') {
-        return 'Please type "confirm" to complete wallet creation:';
-      }
-      
-      try {
-        const response = await this.walletManager.createWallet(
-          this.state.password!
-        );
+        const response = await this.walletManager.createWallet(input);
         const balance = await this.walletManager.getBalance(response.address);
-        
-        // Verify address matches
-        if (response.address.toLowerCase() !== this.state.address?.toLowerCase()) {
-          throw new Error('Created wallet address does not match generated address');
-        }
         
         await WalletState.getInstance().updateState({
           address: response.address,
@@ -166,10 +105,12 @@ export class MockWalletAgent extends AgenticWorkflow {
           isConnected: true
         });
         
-        // Clear sensitive data
+        // Clear state
         this.state = { type: 'idle' };
         
-        return `🎉 Wallet created successfully!\n` +
+        return `🎉 Wallet created successfully!\n\n` +
+               `🔐 IMPORTANT: Save these details securely. They will only be shown once!\n\n` +
+               `📝 Mnemonic Phrase:\n${response.mnemonic}\n\n` +
                `Your wallet address: ${response.address}\n\n` +
                `Your initial balance is ${balance} TURA.`;
       } catch (error) {
@@ -227,8 +168,7 @@ Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
     }
 
     // Handle password states
-    if (this.state.type === 'awaiting_initial_password' || 
-        this.state.type === 'awaiting_wallet_backup_confirm') {
+    if (this.state.type === 'awaiting_wallet_password') {
       return await this.handleCreateWallet(text);
     }
     
