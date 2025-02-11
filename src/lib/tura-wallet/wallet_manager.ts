@@ -559,111 +559,107 @@ export class WalletManagerImpl {
       WalletManagerImpl.getSessionKey();
       
       const sessionData = await this._decrypt(encrypted, 'session') as SessionData;
-        
-        // Log session data for debugging
-        console.log('Decrypted session data:', {
-          hasPassword: !!sessionData?.password,
-          expires: sessionData?.expires ? new Date(sessionData.expires).toLocaleString() : 'none',
-          remainingTime: sessionData?.expires ? Math.floor((sessionData.expires - Date.now()) / 1000) : 0,
-          now: new Date().toLocaleString()
-        });
+      
+      // Log session data for debugging
+      console.log('Decrypted session data:', {
+        hasPassword: !!sessionData?.password,
+        expires: sessionData?.expires ? new Date(sessionData.expires).toLocaleString() : 'none',
+        remainingTime: sessionData?.expires ? Math.floor((sessionData.expires - Date.now()) / 1000) : 0,
+        now: new Date().toLocaleString()
+      });
 
-        // Validate session data structure
-        if (!sessionData || typeof sessionData !== 'object') {
-          console.warn('Invalid session data format:', sessionData);
-          return null;
-        }
-
-        // Handle missing or invalid session data
-        if (!sessionData.password || !sessionData.expires) {
-          console.warn('Incomplete session data:', { 
-            hasPassword: !!sessionData.password, 
-            hasExpires: !!sessionData.expires,
-            sessionData
-          });
-          return null;
-        }
-        
-        // Validate expiration time
-        if (typeof sessionData.expires !== 'number' || isNaN(sessionData.expires)) {
-          console.error('Invalid session expiration time:', sessionData.expires);
-          return null;
-        }
-        
-        // Only proceed if we have a valid session
-        const lastWallet = localStorage.getItem(this.lastWalletKey);
-        if (!lastWallet) {
-          console.warn('No last wallet found for session');
-          return null;
-        }
-
-        // Check for inactivity timeout (30 minutes)
-        const lastActivity = parseInt(localStorage.getItem('last_activity') || '0');
-        const inactiveTime = Date.now() - lastActivity;
-        if (inactiveTime > 30 * 60 * 1000) { // 30 minutes
-          console.log('Session inactive timeout reached:', {
-            lastActivity: new Date(lastActivity).toLocaleString(),
-            inactiveTime: Math.floor(inactiveTime / 1000),
-            threshold: 30 * 60
-          });
-          this.logout();
-          return null;
-        }
-
-        // Always update last activity timestamp for valid sessions
-        localStorage.setItem('last_activity', Date.now().toString());
-
-        // Check session expiration
-        const now = Date.now();
-        const remainingTime = Math.max(0, Math.floor((sessionData.expires - now) / 1000));
-        
-        if (sessionData.expires <= now) {
-          console.log('Session expired:', {
-            expires: new Date(sessionData.expires).toLocaleString(),
-            now: new Date(now).toLocaleString(),
-            remainingTime
-          });
-          // When session expires, disconnect but keep the address
-          this._isConnected = false;
-          await WalletState.getInstance().updateState({ isConnected: false });
-          return null;
-        }
-
-        // Extend session time if less than 4 minutes remaining
-        if (remainingTime < 240) {
-          const oldExpires = sessionData.expires;
-          sessionData.expires = now + (5 * 60 * 1000); // Reset to 5 minutes
-          
-          try {
-            const encryptedSession = await this._encrypt(sessionData, 'session');
-            sessionStorage.setItem(this.sessionKey, encryptedSession);
-            
-            console.log('Session extended:', {
-              oldExpires: new Date(oldExpires).toLocaleString(),
-              newExpires: new Date(sessionData.expires).toLocaleString(),
-              oldRemainingTime: remainingTime,
-              newRemainingTime: 300 // 5 minutes in seconds
-            });
-          } catch (error) {
-            console.error('Failed to extend session:', error);
-            // Keep the old expiration time on encryption failure
-            sessionData.expires = oldExpires;
-          }
-        } else {
-          console.log('Session status:', {
-            expires: new Date(sessionData.expires).toLocaleString(),
-            remainingTime,
-            now: new Date(now).toLocaleString()
-          });
-        }
-
-        return sessionData;
-      } catch (error: unknown) {
-        console.error('Failed to process session:', error);
+      // Validate session data structure
+      if (!sessionData || typeof sessionData !== 'object') {
+        console.warn('Invalid session data format:', sessionData);
         return null;
       }
+
+      // Handle missing or invalid session data
+      if (!sessionData.password || !sessionData.expires) {
+        console.warn('Incomplete session data:', { 
+          hasPassword: !!sessionData.password, 
+          hasExpires: !!sessionData.expires,
+          sessionData
+        });
+        return null;
+      }
+        
+      // Validate expiration time
+      if (typeof sessionData.expires !== 'number' || isNaN(sessionData.expires)) {
+        console.error('Invalid session expiration time:', sessionData.expires);
+        return null;
+      }
+      
+      // Only proceed if we have a valid session
+      const lastWallet = localStorage.getItem(this.lastWalletKey);
+      if (!lastWallet) {
+        console.warn('No last wallet found for session');
+        return null;
+      }
+
+      // Check for inactivity timeout (30 minutes)
+      const lastActivity = parseInt(localStorage.getItem('last_activity') || '0');
+      const inactiveTime = Date.now() - lastActivity;
+      if (inactiveTime > 30 * 60 * 1000) { // 30 minutes
+        console.log('Session inactive timeout reached:', {
+          lastActivity: new Date(lastActivity).toLocaleString(),
+          inactiveTime: Math.floor(inactiveTime / 1000),
+          threshold: 30 * 60
+        });
+        this.logout();
+        return null;
+      }
+
+      // Always update last activity timestamp for valid sessions
+      localStorage.setItem('last_activity', Date.now().toString());
+
+      // Check session expiration
+      const now = Date.now();
+      const remainingTime = Math.max(0, Math.floor((sessionData.expires - now) / 1000));
+      
+      if (sessionData.expires <= now) {
+        console.log('Session expired:', {
+          expires: new Date(sessionData.expires).toLocaleString(),
+          now: new Date(now).toLocaleString(),
+          remainingTime
+        });
+        // When session expires, disconnect but keep the address
+        this._isConnected = false;
+        await WalletState.getInstance().updateState({ isConnected: false });
+        return null;
+      }
+
+      // Extend session time if less than 4 minutes remaining
+      if (remainingTime < 240) {
+        const oldExpires = sessionData.expires;
+        sessionData.expires = now + (5 * 60 * 1000); // Reset to 5 minutes
+        
+        try {
+          const encryptedSession = await this._encrypt(sessionData, 'session');
+          sessionStorage.setItem(this.sessionKey, encryptedSession);
+          
+          console.log('Session extended:', {
+            oldExpires: new Date(oldExpires).toLocaleString(),
+            newExpires: new Date(sessionData.expires).toLocaleString(),
+            oldRemainingTime: remainingTime,
+            newRemainingTime: 300 // 5 minutes in seconds
+          });
+        } catch (error) {
+          console.error('Failed to extend session:', error);
+          // Keep the old expiration time on encryption failure
+          sessionData.expires = oldExpires;
+        }
+      } else {
+        console.log('Session status:', {
+          expires: new Date(sessionData.expires).toLocaleString(),
+          remainingTime,
+          now: new Date(now).toLocaleString()
+        });
+      }
+
+      return sessionData;
     } catch (error: unknown) {
-      console.error('Failed to access session storage:', error);
+      console.error('Failed to process session:', error);
       return null;
     }
   }
