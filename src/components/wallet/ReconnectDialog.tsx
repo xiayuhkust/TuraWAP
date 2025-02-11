@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +23,6 @@ export const ReconnectDialog: React.FC<ReconnectDialogProps> = ({
   onReconnect,
   onClearAccount,
 }) => {
-  const { t } = useTranslation();
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -53,18 +51,18 @@ export const ReconnectDialog: React.FC<ReconnectDialogProps> = ({
       }
       onClose();
     }}>
-      <DialogContent className="sm:max-w-[425px] bg-[#2B2D31] border-[#393B40]">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-[#F2F3F5]">{t('sessionExpired')}</DialogTitle>
-          <DialogDescription className="text-[#949BA4]">
-            {t('sessionExpiredDesc')}
+          <DialogTitle>Session Expired</DialogTitle>
+          <DialogDescription>
+            Your session has expired. Please enter your password to reconnect or clear your account.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <Input
             id="password"
             type="password"
-            placeholder={t('enterPassword')}
+            placeholder="Enter your wallet password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyPress={(e) => {
@@ -85,13 +83,13 @@ export const ReconnectDialog: React.FC<ReconnectDialogProps> = ({
               onClick={onClearAccount}
               disabled={loading}
             >
-              {t('clearAccount')}
+              Clear Account
             </Button>
             <Button
               onClick={handleReconnect}
               disabled={!password || loading}
             >
-              {loading ? t('reconnecting') : t('reconnect')}
+              {loading ? 'Reconnecting...' : 'Reconnect'}
             </Button>
           </div>
         </DialogFooter>
