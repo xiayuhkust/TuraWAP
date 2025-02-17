@@ -1,20 +1,7 @@
 import { AgenticWorkflow, Intent } from './AgenticWorkflow';
-import { OpenAI } from 'openai';
 import { WalletManagerImpl } from '../lib/tura-wallet/wallet_manager';
 import { WalletState } from '../lib/tura-wallet/wallet_state';
-
-/// <reference types="vite/client" />
-
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-if (!OPENAI_API_KEY) {
-  console.error('OpenAI API key not found in environment variables');
-  throw new Error('OpenAI API key is required for intent recognition');
-}
-
-const openai = new OpenAI({
-  apiKey: OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true
-});
+import { openai, hasOpenAI, validateOpenAIKey } from '@/lib/openai/config';
 
 export class MockWalletAgent extends AgenticWorkflow {
   protected exampleTxt = [
@@ -39,6 +26,14 @@ export class MockWalletAgent extends AgenticWorkflow {
     );
     
     this.walletManager = new WalletManagerImpl();
+
+    if (hasOpenAI) {
+      try {
+        validateOpenAIKey();
+      } catch (error) {
+        console.warn('Agent features will be limited:', error);
+      }
+    }
   }
 
   private async handleLogin(address?: string): Promise<string> {
@@ -128,11 +123,17 @@ export class MockWalletAgent extends AgenticWorkflow {
       return { name: 'unknown', confidence: 0.0 };
     }
 
-    const result = await openai.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: `You are a wallet assistant. Classify user messages into exactly one of these categories:
+    if (!hasOpenAI) {
+      return { name: 'unknown', confidence: 0.0 };
+    }
+
+    try {
+      validateOpenAIKey();
+      const result = await openai.chat.completions.create({
+        messages: [
+          {
+            role: 'system',
+            content: `You are a wallet assistant. Classify user messages into exactly one of these categories:
 CREATE_WALLET - When user wants to create a new wallet
 CHECK_BALANCE - When user wants to check their balance
 SEND_TOKENS - When user wants to send/transfer TURA tokens
@@ -141,25 +142,29 @@ UNKNOWN - When the intent doesn't match any of the above
 
 Respond with a JSON object containing 'intent' and 'confidence' fields.
 Example: {"intent": "CREATE_WALLET", "confidence": 0.95}`
-        },
-        { role: 'user', content: text }
-      ],
-      model: "gpt-3.5-turbo",
-      temperature: 0,
-      max_tokens: 50,
-      response_format: { type: "json_object" }
-    });
+          },
+          { role: 'user', content: text }
+        ],
+        model: "gpt-3.5-turbo",
+        temperature: 0,
+        max_tokens: 50,
+        response_format: { type: "json_object" }
+      });
 
-    const content = result.choices[0].message?.content;
-    if (!content) {
+      const content = result.choices[0].message?.content;
+      if (!content) {
+        return { name: 'unknown', confidence: 0.0 };
+      }
+
+      const completion = JSON.parse(content);
+      return {
+        name: completion.intent?.toLowerCase() || 'unknown',
+        confidence: completion.confidence || 0.0
+      };
+    } catch (error) {
+      console.error('Intent recognition error:', error);
       return { name: 'unknown', confidence: 0.0 };
     }
-
-    const completion = JSON.parse(content);
-    return {
-      name: completion.intent?.toLowerCase() || 'unknown',
-      confidence: completion.confidence || 0.0
-    };
   }
 
   protected async handleIntent(_intent: Intent, text: string): Promise<string> {

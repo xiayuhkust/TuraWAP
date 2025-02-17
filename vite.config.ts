@@ -37,7 +37,10 @@ const config: UserConfig = {
     postcss: './postcss.config.js'
   },
   build: {
-    target: 'esnext'
+    target: 'esnext',
+    rollupOptions: {
+      external: ['openai']
+    }
   }
 };
 

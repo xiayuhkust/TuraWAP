@@ -1,19 +1,10 @@
 import { AgenticWorkflow, Intent } from './AgenticWorkflow';
-import { OpenAI } from 'openai';
 import { addAgentToStore, getAllAgents } from '../stores/agent-store';
 import { getWorkflowRuns } from '../stores/store-econ';
 import { AgentData } from '../types/agentTypes';
 import { WalletManagerImpl } from '../lib/tura-wallet/wallet_manager';
+import { openai, hasOpenAI, validateOpenAIKey } from '@/lib/openai/config';
 
-/// <reference types="vite/client" />
-
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
-  dangerouslyAllowBrowser: true
-});
-
-// Gracefully handle missing API key
-const hasOpenAI = !!import.meta.env.VITE_OPENAI_API_KEY;
 if (!hasOpenAI) {
   console.warn('OpenAI API key not found. Agent features will be disabled.');
 }
@@ -51,7 +42,9 @@ export class MockAgentManager extends AgenticWorkflow {
     if (!hasOpenAI) {
       return { name: 'general_help', confidence: 1.0 };
     }
+    
     try {
+      validateOpenAIKey();
       const result = await openai.chat.completions.create({
         messages: [
           {
