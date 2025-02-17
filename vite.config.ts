@@ -10,7 +10,7 @@ const serverConfig: ServerOptions = {
   cors: true,
   proxy: {
     '/rpc': {
-      target: 'https://rpc-dev.turablockchain.com',
+      target: 'https://rpc-beta1.turablockchain.com',
       changeOrigin: true,
       secure: true,
       ws: false,
