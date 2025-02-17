@@ -32,7 +32,7 @@ const config: UserConfig = {
     postcss: './postcss.config.js'
   },
   build: {
-    target: 'esnext'
+    target: 'es2020'
   }
 };
 
