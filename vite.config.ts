@@ -10,11 +10,16 @@ const serverConfig: ServerOptions = {
   cors: true,
   proxy: {
     '/rpc': {
-      target: 'https://rpc-dev.turablockchain.com',
+      target: process.env.VITE_RPC_URL || '/rpc',
       changeOrigin: true,
       secure: true,
       ws: false,
-      rewrite: (path) => path.replace(/^\/rpc/, '')
+      rewrite: (path) => path.replace(/^\/rpc/, ''),
+      configure: (proxy, _options) => {
+        proxy.on('proxyReq', (proxyReq, _req, _res, _options) => {
+          proxyReq.setHeader('Content-Type', 'application/json');
+        });
+      }
     }
   }
 };

@@ -23,7 +23,9 @@ export const WalletDisplay: React.FC = () => {
       }
     });
     setWalletInfo(walletState.getState());
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+    };
   }, []);
   
   const handleRefresh = async () => {

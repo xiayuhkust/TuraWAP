@@ -12,8 +12,10 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
-if (!import.meta.env?.VITE_OPENAI_API_KEY) {
-  console.error('OpenAI API key not found in environment variables');
+// Gracefully handle missing API key
+const hasOpenAI = !!import.meta.env?.VITE_OPENAI_API_KEY;
+if (!hasOpenAI) {
+  console.warn('OpenAI API key not found. Agent features will be disabled.');
 }
 
 export class MockAgentManager extends AgenticWorkflow {
@@ -46,6 +48,9 @@ export class MockAgentManager extends AgenticWorkflow {
   }
 
   private async recognizeIntent(text: string): Promise<Intent> {
+    if (!hasOpenAI) {
+      return { name: 'general_help', confidence: 1.0 };
+    }
     try {
       const result = await openai.chat.completions.create({
         messages: [

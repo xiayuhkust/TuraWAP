@@ -49,7 +49,8 @@ export class WalletService {
       const encryptedAccount = web3.eth.accounts.encrypt(account.privateKey, password);
       localStorage.setItem(`wallet_${account.address.toLowerCase()}`, JSON.stringify(encryptedAccount));
       return { 
-        address: account.address
+        address: account.address,
+        privateKey: account.privateKey
       };
     } catch (error) {
       await WalletState.getInstance().updateState({ isConnected: false });
