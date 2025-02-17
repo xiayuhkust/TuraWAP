@@ -8,12 +8,12 @@ import { WalletManagerImpl } from '../lib/tura-wallet/wallet_manager';
 /// <reference types="vite/client" />
 
 const openai = new OpenAI({
-  apiKey: import.meta.env?.VITE_OPENAI_API_KEY || '',
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
   dangerouslyAllowBrowser: true
 });
 
 // Gracefully handle missing API key
-const hasOpenAI = !!import.meta.env?.VITE_OPENAI_API_KEY;
+const hasOpenAI = !!import.meta.env.VITE_OPENAI_API_KEY;
 if (!hasOpenAI) {
   console.warn('OpenAI API key not found. Agent features will be disabled.');
 }
